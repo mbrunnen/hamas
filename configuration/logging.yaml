@@ -1,0 +1,114 @@
+version: 1
+disable_existing_loggers: False # otherwise the logger doesn't work
+create_dir: ./logs
+formatters:
+    oneline:
+        style: '{'
+        format: '{levelname} {asctime} {name}:{lineno} {message}'
+        datefmt: '%d-%m-%y %H:%M:%S'
+
+    multiline:
+        style: '{'
+        format: "{levelname}\t{asctime}\t{name}:{lineno}:\n\t{message}\n"
+        datefmt: '%d-%m-%y %H:%M:%S'
+
+    csv_fmt:
+        style: '{'
+        format: "{row}"
+
+filters:
+    shell_filter:
+        (): hamas.PatternFilter
+        patterns:
+#            - agent_platform
+            - scripts
+            - message_transport
+#            - zigbee
+#            - ports
+            - hamas.ems
+
+    zigbee_sent_msgs_filter:
+        (): hamas.CSVFilter
+        context: zigbee_sent_msgs
+
+    received_msgs_filter:
+        (): hamas.CSVFilter
+        context: received_msgs
+
+handlers:
+    shell:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: multiline
+        stream: ext://sys.stdout
+        filters:
+            - shell_filter
+
+    received_msgs_csv:
+        class: logging.FileHandler
+        filename: logs/received_msgs.csv
+        mode: w
+        level: DEBUG
+        formatter: csv_fmt
+        filters:
+            - received_msgs_filter
+
+    sent_zigbee_msgs_csv:
+        class: logging.FileHandler
+        filename: logs/zigbee_sent_msgs.csv
+        mode: w
+        level: DEBUG
+        formatter: csv_fmt
+        filters:
+            - zigbee_sent_msgs_filter
+
+    received_msgs_csv:
+        class: logging.FileHandler
+        filename: logs/received_msgs.csv
+        mode: w
+        level: DEBUG
+        formatter: csv_fmt
+        filters:
+            - received_msgs_filter
+
+    info_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: INFO
+        formatter: oneline
+        filename: logs/info.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+    error_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: ERROR
+        formatter: oneline
+        filename: logs/errors.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+    syslog_handler:
+        class: logging.handlers.SysLogHandler
+        formatter: oneline
+        level: WARN
+
+root:
+    level: DEBUG
+    handlers:
+        - shell
+        - received_msgs_csv
+        - sent_zigbee_msgs_csv
+        - info_file_handler
+        - error_file_handler
+        - syslog_handler
+
+# logs in the modules can be precised here
+#loggers:
+#    hamas.management.queue_register:
+#        level: WARN
+#        handlers: [shell]
+#        propagate: yes
+
+
