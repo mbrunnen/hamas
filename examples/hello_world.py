@@ -4,22 +4,26 @@
 #   AUTHOR:     Manoel Brunnen, manoel.brunnen@gmail.com
 #   CREATED:    07.07.2016
 #   LICENSE:    MIT
-#   FILE:       __main__.py
+#   FILE:       hello_world.py
 # =============================================================================
 """The launcher script.
 """
 
 import asyncio
 import logging
+import os
 
-from hamas import Agent, AgentManager
+from hamas import Agent, AgentManager, config_logger
 
 log = logging.getLogger(__name__)
+
+config_logger(os.path.normpath('./logging.yaml'))
 
 
 async def _print_agents(agent_manager):
     for ag in agent_manager.white_pages:
         print(ag)
+    print("Stop the execution by pressing CTRL-C or stop via your IDE.")
 
 
 def main():
@@ -27,7 +31,7 @@ def main():
     machine_name = 'foo'
     regex = '/dev/ttyUSB'
     am = AgentManager.create(machine_name, loop, regex=regex)
-    agent = am.create_agent(Agent)
+    am.create_agent(Agent)
     task = asyncio.ensure_future(_print_agents(am))
     try:
         loop.run_forever()

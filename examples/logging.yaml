@@ -1,6 +1,7 @@
+# Example logging configuration file
+# Make sure the logging directories exist
 version: 1
 disable_existing_loggers: False # otherwise the logger doesn't work
-create_dir: ./logs
 formatters:
     oneline:
         style: '{'

@@ -46,7 +46,7 @@ class PlatformConnector(Connector):
         """
         super(PlatformConnector, self).__init__()
         self._message_transport = mts
-        log.info("{} initialised with address {}.".format(self.__class__.__name__, self.address))
+        log.info("{} initialized with address {}.".format(self.__class__.__name__, self.address))
 
     def __contains__(self, machine_name):
         return machine_name in self.other_machines
