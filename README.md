@@ -1,4 +1,4 @@
-# DABEMAS - A Distributed Agent-based Energy Management System
+# HAMAS - A Distributed Agent-based Energy Management System
 ## Installation
 ### System Installation
 In this case you need root or admin permissions.
