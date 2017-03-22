@@ -1,15 +1,17 @@
-.. hamas documentation master file, created by
-   sphinx-quickstart on Mon Jan  9 16:46:56 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to hamas's documentation!
 =================================
 
+This package provides a framework for building a Multi-Agent System in a
+domestic area. The agents can be easily hosted on different platforms
+and still communicate seamless with each other. The communication channels
+are typical for the in-house use, like WLAN or ZigBee.
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
+   :numbered:
    :caption: Contents:
 
+   hamas
 
 
 Indices and tables

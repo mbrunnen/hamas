@@ -1,10 +1,7 @@
-hamas.management package
+Agent Management
 ========================
 
-Submodules
-----------
-
-hamas.management.agent_manager module
+The AgentManager Class
 -------------------------------------
 
 .. automodule:: hamas.management.agent_manager
@@ -12,7 +9,7 @@ hamas.management.agent_manager module
     :undoc-members:
     :show-inheritance:
 
-hamas.management.agent_platform module
+The AgentPlatform Class
 --------------------------------------
 
 .. automodule:: hamas.management.agent_platform
