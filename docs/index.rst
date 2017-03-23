@@ -9,7 +9,7 @@ are typical for the in-house use, like WLAN or ZigBee.
 .. toctree::
    :maxdepth: 4
    :numbered:
-   :caption: Contents:
+   :caption: **Contents:**
 
    hamas
 

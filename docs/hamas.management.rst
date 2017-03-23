@@ -1,38 +1,21 @@
 Agent Management
 ========================
 
-The AgentManager Class
+The Agent Management
 -------------------------------------
 
-.. automodule:: hamas.management.agent_manager
+.. automodule:: hamas.management.platform
     :members:
     :undoc-members:
     :show-inheritance:
 
-The AgentPlatform Class
---------------------------------------
-
-.. automodule:: hamas.management.agent_platform
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-hamas.management.agents module
+The Agents
 ------------------------------
 
 .. automodule:: hamas.management.agents
     :members:
     :undoc-members:
     :show-inheritance:
-
-hamas.management.queue_register module
---------------------------------------
-
-.. automodule:: hamas.management.queue_register
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

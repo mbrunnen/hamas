@@ -5,9 +5,12 @@
 #   LICENSE:    MIT
 #   FILE:	agents.py
 # =============================================================================
-"""Agent Base Class
+"""The Agent Module
 
-All Agent should be derived from this class.
+This module implements the base Agent class. All agents should be derived from
+this class. The agents can have special methods, which can be called by other
+agents and are decorated with the :decorator:`provide()`. To handle their
+conversations they have with other agents they use the :class:`QueueRegister`.
 """
 
 import asyncio
@@ -17,10 +20,60 @@ import time
 
 from hamas.transport.contents import RemoteProcessCall, RemoteProcessReply, StringContent
 from hamas.transport.messages import Message
-from .queue_register import QueueRegister
-from ..exceptions import TransmissionError, AgentError
+from hamas.exceptions import TransmissionError, AgentError
 
 log = logging.getLogger(__name__)
+
+
+class QueueRegister(object):
+    """A dictionary containing asyncio queues.
+        Args:
+            _url_queue(dict): The dictionary with the queues
+    """
+
+    def __init__(self):
+        self._queues = collections.defaultdict(asyncio.Queue)
+        self._queue_futs = collections.defaultdict(asyncio.Future)
+
+    def __len__(self):
+        return len(self._queues)
+
+    def __contains__(self, item):
+        return item in self._queues
+
+    def new_queue(self, qid, queue_consumer):
+        log.debug(
+            "Started a new Queue with ID {}. There are now {:d} queues in this register.".
+            format(qid, len(self._queues) + 1))
+        assert qid not in self
+        queue_fut = asyncio.Future()
+        self._queue_futs[qid] = queue_fut
+        queue = asyncio.Queue()
+        self._queues[qid] = queue
+        asyncio.ensure_future(queue_consumer)
+        if len(self._queues) > 100:
+            log.warning("The list of queues is getting long: {:d}".format(
+                len(self._queues)))
+        return queue_fut
+
+    async def put(self, qid, item):
+        assert qid in self
+        await self._queues[qid].put(item)
+
+    async def get(self, qid):
+        assert qid in self
+        return await self._queues[qid].get()
+
+    def task_done(self, qid):
+        self._queues[qid].task_done()
+
+    def set_result(self, qid, result):
+        log.debug('Finished queue {}.'.format(qid))
+        # the queue is now considered finished
+        self._queues.pop(qid)
+        queue_fut = self._queue_futs.pop(qid)
+        # in the case there are more than one consumer
+        queue_fut.set_result(result)
 
 
 def provide(func):
@@ -48,7 +101,8 @@ class Agent(object):
             mts(MessageTransportSystem): TODO
         """
 
-        assert set(aid) <= set(self._allowed_chars), "{} is not allowed as AID.".format(aid)
+        assert set(aid) <= set(
+            self._allowed_chars), "{} is not allowed as AID.".format(aid)
         self._aid = aid
         self._mts = mts
         # TODO: pass the loop as argument
@@ -96,11 +150,14 @@ class Agent(object):
         """
         conv_id = message.conversation_id
         if message.routing == 'unicast':
-            reply_fut = self._queues.new_queue(conv_id, self._message_handler(conv_id, timeout, 1))
+            reply_fut = self._queues.new_queue(
+                conv_id, self._message_handler(conv_id, timeout, 1))
         elif message.routing == 'broadcast':
-            reply_fut = self._queues.new_queue(conv_id, self._message_handler(conv_id, timeout, None))
+            reply_fut = self._queues.new_queue(
+                conv_id, self._message_handler(conv_id, timeout, None))
         else:
-            raise TransmissionError('Unknown routing {}.'.format(message.routing))
+            raise TransmissionError(
+                'Unknown routing {}.'.format(message.routing))
         asyncio.ensure_future(self.send(message))
         return reply_fut
 
@@ -134,7 +191,13 @@ class Agent(object):
         assert type(message) is Message
         await self._mts.receive(message)
 
-    async def remote_process_call(self, function, *args, recipient=None, timeout=5, routing='unicast', **kwargs):
+    async def remote_process_call(self,
+                                  function,
+                                  *args,
+                                  recipient=None,
+                                  timeout=5,
+                                  routing='unicast',
+                                  **kwargs):
         # TODO: rename to request
         call = RemoteProcessCall(function, args, kwargs)
         message = Message(
@@ -142,8 +205,7 @@ class Agent(object):
             sender=self._aid,
             recipient=recipient,
             content=call,
-            routing=routing,
-        )
+            routing=routing,)
         reply = await self.get_reply(message, timeout)
         if not reply:
             raise AgentError("No replies.")
@@ -155,7 +217,8 @@ class Agent(object):
                 assert reply.content.function == function
                 return reply.content.returns
             else:
-                log.error('Got a unexpected performative: {}'.format(reply.performative))
+                log.error('Got a unexpected performative: {}'.format(
+                    reply.performative))
         else:
             return_values = []
             for r in reply:
@@ -166,7 +229,8 @@ class Agent(object):
                     assert r.content.function == function
                     return_values.append(r.content.returns)
                 else:
-                    log.error('Got a unexpected performative: {}'.format(r.performative))
+                    log.error('Got a unexpected performative: {}'.format(
+                        r.performative))
             return return_values
 
     async def receive(self, message):
@@ -179,9 +243,11 @@ class Agent(object):
             # old message types
             await self.custom_contents_cb(message)
         else:
-            log.warning("Got an unexpected reply. Perhaps timed out.\n\t{}".format(message.content))
+            log.warning("Got an unexpected reply. Perhaps timed out.\n\t{}".
+                        format(message.content))
 
     async def _message_handler(self, conv_id, timeout, num_items):
+
         def stop_condition():
             if timeout_reached:
                 log.debug('Timeout for queue {} reached.'.format(conv_id))
@@ -196,16 +262,19 @@ class Agent(object):
         while not stop_condition():
             try:
                 start = time.monotonic()
-                item = await asyncio.wait_for(self._queues.get(conv_id), timeout)
+                item = await asyncio.wait_for(
+                    self._queues.get(conv_id), timeout)
             except asyncio.TimeoutError:
                 timeout_reached = True
             else:
-                log.debug('Message queue {} got a new item:\n\t{}'.format(conv_id, item))
+                log.debug('Message queue {} got a new item:\n\t{}'.format(
+                    conv_id, item))
                 self._queues.task_done(conv_id)
                 messages.append(item)
             finally:
                 end = time.monotonic()
-                log.debug('Queue {} waited {:.3f}s for new item'.format(conv_id, end - start))
+                log.debug('Queue {} waited {:.3f}s for new item'.format(
+                    conv_id, end - start))
         self._queues.set_result(conv_id, messages)
 
     async def _on_request_cb(self, message):
@@ -222,13 +291,16 @@ class Agent(object):
                 except Exception as exc:
                     log.exception(exc)
                     performative = 'failure'
-                    content = StringContent("Agent {} failed on function {}.".format(self.aid, function))
+                    content = StringContent("Agent {} failed on function {}.".
+                                            format(self.aid, function))
             else:
                 performative = 'refuse'
-                content = StringContent("Agent {} don't provide function {}.".format(self.aid, function))
+                content = StringContent("Agent {} don't provide function {}.".
+                                        format(self.aid, function))
         else:
             performative = 'refuse'
-            content = StringContent("Agent {} don't has function {}.".format(self.aid, function))
+            content = StringContent(
+                "Agent {} don't has function {}.".format(self.aid, function))
         await self.send_reply(content, message, performative)
 
     async def send_reply(self, content, message, performative=None):
@@ -250,4 +322,6 @@ class Agent(object):
         Args:
             message(Message): A message with custom content
         """
-        log.debug("No 'custom_contents_cb' callback for agent '{}' provided. Message dropped:\n\t{}".format(self, message))
+        log.debug(
+            "No 'custom_contents_cb' callback for agent '{}' provided. Message dropped:\n\t{}".
+            format(self, message))
