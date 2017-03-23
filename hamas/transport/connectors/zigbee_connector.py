@@ -104,6 +104,7 @@ class ZigBeeConnector(Connector):
         self._serial_timeout = serial_timeout
         self._unicast_timeout = ucast_timeout
         self._mtu = 84
+        # TODO: Better to pass the MTS, callback is not necessary.
         # callback is not a coro, because of functools
         assert not callback or (not asyncio.iscoroutinefunction(callback))
         self._callback = callback

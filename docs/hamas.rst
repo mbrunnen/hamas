@@ -1,18 +1,27 @@
-hamas package
-=============
 
-Subpackages
------------
+The Agents
+------------------------------
 
+.. automodule:: hamas.agents
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Agent Management
+--------------------------
+
+.. automodule:: hamas.management
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Message Transport
+--------------------------
 .. toctree::
 
-    hamas.management
     hamas.transport
 
-Submodules
-----------
-
-hamas.configuration module
+Configuration
 --------------------------
 
 .. automodule:: hamas.configuration
@@ -20,15 +29,17 @@ hamas.configuration module
     :undoc-members:
     :show-inheritance:
 
-hamas.exceptions module
+Miscelleanous
 -----------------------
 
+Exceptions
+~~~~~~~~~~
 .. automodule:: hamas.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
 
-hamas.filter module
+Logging
 -------------------
 
 .. automodule:: hamas.filter
