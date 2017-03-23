@@ -3,7 +3,7 @@
 #   AUTHOR:     Manoel Brunnen, manoel.brunnen@gmail.com
 #   CREATED:    30.11.2016
 #   LICENSE:    MIT
-#   FILE:       agent_platform.py
+#   FILE:       management.py
 # =============================================================================
 """
 """
@@ -21,7 +21,8 @@ log = logging.getLogger(__name__)
 class AgentPlatform(object):
     _allowed_chars = '_' + string.ascii_letters + string.digits
 
-    def __init__(self, machine_name, loop, update_interval=60, regex='/dev/ttyUSB'):
+    def __init__(self, machine_name, loop, update_interval=60,
+                 regex='/dev/ttyUSB'):
         def generate_name():
             gen_new = itertools.count()
             while True:
@@ -30,11 +31,14 @@ class AgentPlatform(object):
                     yield i
                 yield next(gen_new)
 
-        assert set(machine_name) <= set(self._allowed_chars), "Only {} characters are allowed as machine_name.".format(
+        assert set(machine_name) <= set(
+            self._allowed_chars), "Only {} characters are allowed as machine_name.".format(
             self._allowed_chars)
         self._loop = loop
         self._machine_name = machine_name
-        self._message_transport = MessageTransportSystem(platform=self, update_interval=update_interval, regex=regex)
+        self._message_transport = MessageTransportSystem(platform=self,
+                                                         update_interval=update_interval,
+                                                         regex=regex)
         self.__agents = dict()
         self._last_num = 0
         self._free_names = list()
@@ -71,7 +75,8 @@ class AgentPlatform(object):
         assert issubclass(agent_class, Agent)
         agent_name = str(next(self._name_gen))
         aid = self._machine_name + '/' + agent_name
-        agent = agent_class(*args, aid=aid, mts=self._message_transport, **kwargs)
+        agent = agent_class(*args, aid=aid, mts=self._message_transport,
+                            **kwargs)
         self.__agents[aid] = agent
         log.info("Platform created agent {}.".format(agent))
         self._last_num += 1
@@ -82,6 +87,7 @@ class AgentPlatform(object):
         self._free_names.append(int(num))
         del self.__agents[aid]
         log.info("Platform destroyed agent {}.".format(aid))
+
 
 class AgentManager(Agent):
     """First Agent running which creates, runs and manages the agents.
@@ -109,14 +115,17 @@ class AgentManager(Agent):
         Returns:
             AgentManager
         """
-        platform = AgentPlatform(machine_name=machine_name, loop=loop, regex=regex)
+        platform = AgentPlatform(machine_name=machine_name, loop=loop,
+                                 regex=regex)
         manager = platform.create_agent(AgentManager, platform=platform)
         return manager
 
     def __init__(self, platform, *args, **kwargs):
         """Initialise the AgentManager
         """
-        assert type(platform) is AgentPlatform, "Create the {} with its create method.".format(self.__class__.__name__)
+        assert type(
+            platform) is AgentPlatform, "Create the {} with its create method.".format(
+            self.__class__.__name__)
         super(AgentManager, self).__init__(*args, **kwargs)
         self._platform = platform
         self._white_pages = dict()
