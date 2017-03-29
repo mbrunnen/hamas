@@ -1,5 +1,4 @@
-
-The Agents
+.. toctree::
 ------------------------------
 
 .. automodule:: hamas.agents
@@ -40,26 +39,17 @@ Exceptions
     :show-inheritance:
 
 Logging
--------------------
+~~~~~~~~~~
 
-.. automodule:: hamas.filter
+.. automodule:: hamas.logger
     :members:
     :undoc-members:
     :show-inheritance:
 
-hamas.utils module
-------------------
+Helper Functions
+~~~~~~~~~~~~~~~~
 
 .. automodule:: hamas.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: hamas
     :members:
     :undoc-members:
     :show-inheritance:

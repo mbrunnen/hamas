@@ -23,8 +23,8 @@ import logging
 import struct
 import time
 
-from hamas.exceptions import PortError, TransmissionError
-from hamas.transport.fractions import Fraction
+from ...exceptions import PortError, TransmissionError
+from ..fractions import Fraction
 
 log = logging.getLogger(__name__)
 

@@ -27,15 +27,16 @@ import serial
 import serial.tools.list_ports
 from xbee import ZigBee
 
-from hamas.exceptions import ConnectorError, TransmissionError, PortError
-from hamas.transport.fractions import Fraction
-from hamas.transport.messages import Message
-from hamas.transport.serializable import Serializable
-from hamas.utils import hexstr2bytes, bytes2hexstr
+from ...exceptions import ConnectorError, TransmissionError, PortError
+from ..fractions import Fraction
+from ..messages import Message
+from ..serializable import Serializable
+from ...utils import hexstr2bytes, bytes2hexstr
 from .connector import Connector
 from .ports import Port
 
-NOZIGBEE = 'HAMASNOZIGBEE' in os.environ.keys() and os.environ['HAMASNOZIGBEE'] == '1'
+NOZIGBEE = 'HAMASNOZIGBEE' in os.environ.keys(
+) and os.environ['HAMASNOZIGBEE'] == '1'
 log = logging.getLogger(__name__)
 
 
@@ -51,7 +52,8 @@ class ZigBeeConnector(Connector):
         _unicast_timeout (float): Time that will be waited for another fraction to arrive
     """
 
-    def __init__(self, loop,
+    def __init__(self,
+                 loop,
                  machine_name,
                  regex='/dev/ttyUSB',
                  baud=230400,
@@ -91,9 +93,12 @@ class ZigBeeConnector(Connector):
 
             except KeyboardInterrupt:
                 temp_zigbee.halt()
-                raise ConnectorError("The user interrupted the initialisation of the ZigBeeConnector.")
+                raise ConnectorError(
+                    "The user interrupted the initialisation of the ZigBeeConnector."
+                )
             else:
-                return self.compose_address(b''.join([responses['hi'], responses['lo']]), responses['my'])
+                return self.compose_address(b''.join(
+                    [responses['hi'], responses['lo']]), responses['my'])
 
         self._address = read_address()
         self._loop = loop
@@ -115,10 +120,15 @@ class ZigBeeConnector(Connector):
         self._current_frame_id = 0
         self._current_fraction_id = 0
         # For network discovery the machine name has to fit in one fraction
-        assert len(machine_name) <= Fraction.max_sdu_len(self._mtu), "The machine name is too long"
+        assert len(machine_name) <= Fraction.max_sdu_len(
+            self._mtu), "The machine name is too long"
         self._machine_name = machine_name
-        self._ports = [Port(i, self, ucast_timeout, self._mtu) for i in range(Fraction.max_ports() - 1)]
-        log.info("{} initialised with address {}.".format(self.__class__.__name__, self._address))
+        self._ports = [
+            Port(i, self, ucast_timeout, self._mtu)
+            for i in range(Fraction.max_ports() - 1)
+        ]
+        log.info("{} initialised with address {}.".format(
+            self.__class__.__name__, self._address))
 
     def __contains__(self, machine_url):
         return machine_url in self._other_machines.keys()
@@ -141,7 +151,7 @@ class ZigBeeConnector(Connector):
         Only if an Frame ID is set and is not zero, the xbee module will send
         an feedback frame.
         """
-        max_count = 2 ** (8 * struct.calcsize('B')) - 1
+        max_count = 2**(8 * struct.calcsize('B')) - 1
         self._current_frame_id = (self._current_frame_id % max_count) + 1
         fid = bytes([self._current_frame_id])
         return fid
@@ -162,31 +172,40 @@ class ZigBeeConnector(Connector):
         """
         start = time.monotonic()
         serialized_frac = fraction.serialize()
-        response = await self.send_command(cmd='tx',
-                                           address=address,
-                                           data=serialized_frac)
+        response = await self.send_command(
+            cmd='tx', address=address, data=serialized_frac)
         if response['deliver_status'] != b'\x00':
-            raise TransmissionError('The transmission failed with status "0x{}".'.format(bytes2hexstr(response['deliver_status'])))
-        log.info("Sent a %s fraction to port %i on %s.", fraction.flag, fraction.port, address,
-                 extra={'data_context': 'sent_frac',
-                        'data': {
-                            'frac_type': fraction.flag,
-                            'dest_addr': address,
-                            'port': fraction.port,
-                            'seq_id': fraction.seq_id,
-                            'bytes': len(serialized_frac),
-                            'dur': time.monotonic() - start
-                        }
-                        })
+            raise TransmissionError(
+                'The transmission failed with status "0x{}".'.format(
+                    bytes2hexstr(response['deliver_status'])))
+        log.info(
+            "Sent a %s fraction to port %i on %s.",
+            fraction.flag,
+            fraction.port,
+            address,
+            extra={
+                'data_context': 'sent_frac',
+                'data': {
+                    'frac_type': fraction.flag,
+                    'dest_addr': address,
+                    'port': fraction.port,
+                    'seq_id': fraction.seq_id,
+                    'bytes': len(serialized_frac),
+                    'dur': time.monotonic() - start
+                }
+            })
 
     async def broadcast_fraction(self, fraction, hops=None):
         log.info("Broadcasting a {} fraction.".format(fraction.flag))
-        response = await self.send_command(cmd='tx',
-                                           address='00:00:00:00:00:00:FF:FF!FFFE',
-                                           data=fraction.serialize(),
-                                           broadcastradius=hops)
+        response = await self.send_command(
+            cmd='tx',
+            address='00:00:00:00:00:00:FF:FF!FFFE',
+            data=fraction.serialize(),
+            broadcastradius=hops)
         if response['deliver_status'] != b'\x00':
-            raise TransmissionError('The transmission failed with status "0x{}".'.format(bytes2hexstr(response['deliver_status'])))
+            raise TransmissionError(
+                'The transmission failed with status "0x{}".'.format(
+                    bytes2hexstr(response['deliver_status'])))
 
     async def send_command(self, address=None, **kwargs):
         """ Send a zigbee related AT command
@@ -222,7 +241,8 @@ class ZigBeeConnector(Connector):
         try:
             response = await pending_response
         except asyncio.TimeoutError as exc:
-            raise TransmissionError("The transmission failed without response.") from exc
+            raise TransmissionError(
+                "The transmission failed without response.") from exc
         else:
             return response
         finally:
@@ -250,7 +270,8 @@ class ZigBeeConnector(Connector):
         the main thread. This is done by using the run_coroutine_threadsafe method.
 
         """
-        asyncio.run_coroutine_threadsafe(self._frame_received(data), self._loop)
+        asyncio.run_coroutine_threadsafe(
+            self._frame_received(data), self._loop)
 
     async def _frame_received(self, frame):
         """Appending new messages.
@@ -271,11 +292,13 @@ class ZigBeeConnector(Connector):
             api_id = frame['id']
             if api_id == 'rx' or api_id == 'rx_explicit':
                 assert 'rf_data' in frame.keys()
-                address = self.compose_address(frame['source_addr_long'], frame['source_addr'])
+                address = self.compose_address(frame['source_addr_long'],
+                                               frame['source_addr'])
                 fraction = frame['rf_data']
                 self._fraction_received(fraction, address)
             else:
-                log.warning('Got a frame with unexpected API ID "{}":\n\t{}'.format(api_id, frame))
+                log.warning('Got a frame with unexpected API ID "{}":\n\t{}'.
+                            format(api_id, frame))
         else:
             frame_id = frame['frame_id']
             if frame_id in self._response_futs:
@@ -286,33 +309,43 @@ class ZigBeeConnector(Connector):
 
     def _fraction_received(self, serialized_frac, source_address):
         fraction = Fraction.deserialize(serialized_frac)
-        if fraction.port == 0xff and (fraction.flag == 'URL' or fraction.flag == 'JOIN'):
+        if fraction.port == 0xff and (fraction.flag == 'URL' or
+                                      fraction.flag == 'JOIN'):
             asyncio.ensure_future(self._add_machine(source_address, fraction))
         else:
-            asyncio.ensure_future(self._ports[fraction.port].receive(source_address, fraction))
+            asyncio.ensure_future(
+                self._ports[fraction.port].receive(source_address, fraction))
 
-        log.info("Received a %s fraction from %s for port %i.", fraction.flag, source_address, fraction.port,
-                 extra={'data_context': 'received_frac',
-                        'data': {
-                            'frac_type': fraction.flag,
-                            'source_addr': source_address,
-                            'port': fraction.port,
-                            'seq_id': fraction.seq_id,
-                            'bytes': len(serialized_frac),
-                        }
-                        })
+        log.info(
+            "Received a %s fraction from %s for port %i.",
+            fraction.flag,
+            source_address,
+            fraction.port,
+            extra={
+                'data_context': 'received_frac',
+                'data': {
+                    'frac_type': fraction.flag,
+                    'source_addr': source_address,
+                    'port': fraction.port,
+                    'seq_id': fraction.seq_id,
+                    'bytes': len(serialized_frac),
+                }
+            })
 
     def deliver(self, serialized_message):
-        log.debug("Got a new serialized Message with {:d} bytes.".format(len(serialized_message)))
+        log.debug("Got a new serialized Message with {:d} bytes.".format(
+            len(serialized_message)))
         try:
             message = self._deserialize_message(serialized_message)
         except (KeyError, EOFError, ValueError, TypeError):
-            log.exception("Deserialization of the message %s went wrong.", serialized_message)
+            log.exception("Deserialization of the message %s went wrong.",
+                          serialized_message)
         else:
             if self._callback:
                 self._callback(message)
             else:
-                log.warning("No callback provided. Throwing away message:\n\t".format(message))
+                log.warning("No callback provided. Throwing away message:\n\t".
+                            format(message))
 
     @staticmethod
     def _deserialize_message(serialized_msg):
@@ -330,19 +363,18 @@ class ZigBeeConnector(Connector):
         """ Get the other participants in the network.
 
         """
-        frac = Fraction(
-            port=0xff,
-            flag='JOIN',
-            sdu=self.machine_name.encode())
+        frac = Fraction(port=0xff, flag='JOIN', sdu=self.machine_name.encode())
         await self.broadcast_fraction(frac)
 
     async def _add_machine(self, source_address, fraction):
         source_machine_name = fraction.sdu.decode()
         if fraction.flag == 'JOIN':
             # passive add
-            log.info("Added machine '{}' with address {}.".format(source_machine_name, source_address))
+            log.info("Added machine '{}' with address {}.".format(
+                source_machine_name, source_address))
             self._other_machines[source_machine_name] = source_address
-            response = Fraction(0xff, flag='URL', sdu=self._machine_name.encode())
+            response = Fraction(
+                0xff, flag='URL', sdu=self._machine_name.encode())
             await self._ports_opened.wait()
             await self.send_fraction(source_address, response)
             self._joined.set()
@@ -351,7 +383,8 @@ class ZigBeeConnector(Connector):
             self._other_machines[source_machine_name] = source_address
             self._joined.set()
         else:
-            log.warning("Got a {} fraction on reserved port 255 from {}.".format(fraction.flag, source_address))
+            log.warning("Got a {} fraction on reserved port 255 from {}.".
+                        format(fraction.flag, source_address))
 
     async def wait_for_others(self):
         log.info("Waiting for other machines...")
@@ -381,25 +414,41 @@ class ZigBeeConnector(Connector):
             try:
                 await port.send(address, serialized)
             except PortError as exc:
-                log.warning("Transmission on %s not possible: %s", port, exc.message)
+                log.warning("Transmission on %s not possible: %s", port,
+                            exc.message)
             else:
-                log.info("Transmitted a message on %s.", port,
-                         extra={'data_context': 'zigbee_sent_msgs',
-                                'data': {
-                                    'performative': message.performative,
-                                    'sender': message.sender,
-                                    'routing': message.routing,
-                                    'recipient': message.recipient,
-                                    'dest_addr': address,
-                                    'content': message.content.__class__.__name__,
-                                    'conversation_id': '0x' + bytes2hexstr(message.conversation_id),
-                                    'management': self._machine_name,
-                                    'port': port.number,
-                                    'bytes': len(serialized),
-                                    'duration': time.monotonic() - start,
-                                    'frac_num': Fraction.num_fractions(serialized, self._mtu),
-                                }
-                                })
+                log.info(
+                    "Transmitted a message on %s.",
+                    port,
+                    extra={
+                        'data_context': 'zigbee_sent_msgs',
+                        'data': {
+                            'performative':
+                            message.performative,
+                            'sender':
+                            message.sender,
+                            'routing':
+                            message.routing,
+                            'recipient':
+                            message.recipient,
+                            'dest_addr':
+                            address,
+                            'content':
+                            message.content.__class__.__name__,
+                            'conversation_id':
+                            '0x' + bytes2hexstr(message.conversation_id),
+                            'management':
+                            self._machine_name,
+                            'port':
+                            port.number,
+                            'bytes':
+                            len(serialized),
+                            'duration':
+                            time.monotonic() - start,
+                            'frac_num':
+                            Fraction.num_fractions(serialized, self._mtu),
+                        }
+                    })
                 return
 
         raise TransmissionError("Transmission failed on all Ports.")
@@ -409,15 +458,19 @@ class ZigBeeConnector(Connector):
 
         futs = []
         for m in self.other_machines:
-            futs.append(asyncio.ensure_future(self.unicast(message=message, machine_name=m)))
+            futs.append(
+                asyncio.ensure_future(
+                    self.unicast(message=message, machine_name=m)))
         if futs:
             await asyncio.wait(futs)
 
     async def open_ports(self):
-        await asyncio.wait([asyncio.ensure_future(p.open()) for p in self._ports])
+        await asyncio.wait(
+            [asyncio.ensure_future(p.open()) for p in self._ports])
 
     async def close_ports(self):
-        await asyncio.wait([asyncio.ensure_future(p.close()) for p in self._ports])
+        await asyncio.wait(
+            [asyncio.ensure_future(p.close()) for p in self._ports])
 
     async def start(self):
         """ Start the ZigBeeConnector
@@ -456,7 +509,8 @@ class ZigBeeConnector(Connector):
         """
         address_string = ':'.join(["{:02X}".format(x) for x in long_address])
         if short_address:
-            address_string += '!' + "{:02X}{:02X}".format(short_address[0], short_address[1])
+            address_string += '!' + "{:02X}{:02X}".format(
+                short_address[0], short_address[1])
         return address_string
 
     @classmethod

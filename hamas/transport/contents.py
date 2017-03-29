@@ -13,7 +13,7 @@ the letter inside the envelope. The payload is not important for the delivery
 of the message, but is used by the receiving Agent itself.
 """
 
-from hamas.transport.serializable import Serializable
+from .serializable import Serializable
 
 
 class Content(Serializable):

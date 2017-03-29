@@ -13,10 +13,11 @@ This module implements the communication over the MQTT Protocol.
 import asyncio
 import logging
 import os
+
 import paho.mqtt.client as mqtt
 
-from hamas.transport.messages import Message
 from .connector import Connector
+from ..messages import Message
 
 log = logging.getLogger(__name__)
 

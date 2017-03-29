@@ -14,13 +14,15 @@ conversations they have with other agents they use the :class:`QueueRegister`.
 """
 
 import asyncio
+import collections
 import logging
 import string
 import time
 
-from hamas.transport.contents import RemoteProcessCall, RemoteProcessReply, StringContent
-from hamas.transport.messages import Message
-from hamas.exceptions import TransmissionError, AgentError
+from .exceptions import TransmissionError, AgentError
+from .transport.contents import RemoteProcessCall, RemoteProcessReply, \
+    StringContent
+from .transport.messages import Message
 
 log = logging.getLogger(__name__)
 
@@ -150,11 +152,13 @@ class Agent(object):
         """
         conv_id = message.conversation_id
         if message.routing == 'unicast':
-            reply_fut = self._queues.new_queue(
-                conv_id, self._message_handler(conv_id, timeout, 1))
+            reply_fut = self._queues.new_queue(conv_id,
+                                               self._message_handler(
+                                                   conv_id, timeout, 1))
         elif message.routing == 'broadcast':
-            reply_fut = self._queues.new_queue(
-                conv_id, self._message_handler(conv_id, timeout, None))
+            reply_fut = self._queues.new_queue(conv_id,
+                                               self._message_handler(
+                                                   conv_id, timeout, None))
         else:
             raise TransmissionError(
                 'Unknown routing {}.'.format(message.routing))
@@ -205,7 +209,7 @@ class Agent(object):
             sender=self._aid,
             recipient=recipient,
             content=call,
-            routing=routing,)
+            routing=routing, )
         reply = await self.get_reply(message, timeout)
         if not reply:
             raise AgentError("No replies.")
@@ -247,7 +251,6 @@ class Agent(object):
                         format(message.content))
 
     async def _message_handler(self, conv_id, timeout, num_items):
-
         def stop_condition():
             if timeout_reached:
                 log.debug('Timeout for queue {} reached.'.format(conv_id))

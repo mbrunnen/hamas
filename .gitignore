@@ -218,3 +218,6 @@ Temporary Items
 .cache
 .docu
 *.zip
+
+# Tags
+.tags

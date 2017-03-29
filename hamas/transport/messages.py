@@ -22,8 +22,8 @@ import importlib
 import os
 import struct
 
-from hamas.transport.contents import Content
-from hamas.transport.serializable import Serializable
+from .contents import Content
+from .serializable import Serializable
 
 
 class Message(Serializable):

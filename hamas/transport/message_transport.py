@@ -9,13 +9,13 @@
 import asyncio
 import logging
 
-from hamas.exceptions import TransmissionError, ConnectorError
-from hamas.transport.connectors import LocalConnector
-from hamas.transport.messages import Message
-from hamas.utils import bytes2hexstr
+from .connectors.local_connector import LocalConnector
 from .connectors.platform_connector import PlatformConnector
 from .connectors.unix_connector import UnixConnector
 from .connectors.zigbee_connector import ZigBeeConnector
+from .messages import Message
+from ..exceptions import TransmissionError, ConnectorError
+from ..utils import bytes2hexstr
 
 log = logging.getLogger(__name__)
 
@@ -72,10 +72,17 @@ class MessageTransportSystem(object):
         This is a coroutine because it has to wait for the xbee module in
         another thread.
         """
-        assert type(message) is Message, "Only Messages can be sent:\n\t".format(message)
-        log.debug("Sending a message from {} to {} via {}.".format(message.sender, message.recipient, message.routing))
+        assert type(
+            message) is Message, "Only Messages can be sent:\n\t".format(
+            message)
+        log.debug(
+            "Sending a message from {} to {} via {}.".format(message.sender,
+                                                             message.recipient,
+                                                             message.routing))
         if message.sender == message.recipient:
-            raise TransmissionError('Agent "{}" wants to send a message to himself.'.format(message.sender))
+            raise TransmissionError(
+                'Agent "{}" wants to send a message to himself.'.format(
+                    message.sender))
 
         if message.routing == 'unicast':
             await self._unicast(message, message.recipient)
@@ -93,21 +100,26 @@ class MessageTransportSystem(object):
         if recipient in self._local_connector:
             await self._local_connector.unicast(message=message, aid=recipient)
         elif self._platform_connector and m_name in self._platform_connector:
-            await self._platform_connector.unicast(message=message, machine_name=m_name)
+            await self._platform_connector.unicast(message=message,
+                                                   machine_name=m_name)
         elif self._unix_connector and m_name in self._unix_connector:
-            await self._unix_connector.unicast(message=message, machine_name=m_name)
+            await self._unix_connector.unicast(message=message,
+                                               machine_name=m_name)
         elif self._zigbee_connector and m_name in self._zigbee_connector:
-            await self._zigbee_connector.unicast(message=message, machine_name=m_name)
+            await self._zigbee_connector.unicast(message=message,
+                                                 machine_name=m_name)
         else:
             raise TransmissionError(
-                "Transmission to agent {} on machine {} failed.".format(a_name, m_name))
+                "Transmission to agent {} on machine {} failed.".format(a_name,
+                                                                        m_name))
 
     async def _broadcast(self, message):
         assert message.recipient is None
         broadcast_jobs = list()
 
         m_name, aid = self.parse_aid(message.sender)
-        broadcast_jobs.append(asyncio.ensure_future(self._local_connector.broadcast(message)))
+        broadcast_jobs.append(
+            asyncio.ensure_future(self._local_connector.broadcast(message)))
         # don't rebroadcast
         if m_name == self.machine_name:
             if self._platform_connector:
@@ -120,7 +132,8 @@ class MessageTransportSystem(object):
                         self._unix_connector.broadcast(message)))
             if self._zigbee_connector:
                 broadcast_jobs.append(
-                    asyncio.ensure_future(self._zigbee_connector.broadcast(message)))
+                    asyncio.ensure_future(
+                        self._zigbee_connector.broadcast(message)))
 
         await asyncio.wait(broadcast_jobs)
 
@@ -134,16 +147,19 @@ class MessageTransportSystem(object):
         #     sender_type
         # else:
 
-        log.info("MessageTransportSystem received a %s message from %s for %s with content %s.",
-                 message.routing, message.sender, message.recipient, message.content.__class__.__name__,
-                 extra={'data_context': 'received_msgs',
-                        'data': {'performative': message.performative,
-                                 'sender': message.sender,
-                                 'routing': message.routing,
-                                 'recipient': message.recipient,
-                                 'content': message.content.__class__.__name__,
-                                 'conversation_id': '0x' + bytes2hexstr(message.conversation_id),
-                                 'management': self._machine_name}})
+        log.info(
+            "MessageTransportSystem received a %s message from %s for %s with content %s.",
+            message.routing, message.sender, message.recipient,
+            message.content.__class__.__name__,
+            extra={'data_context': 'received_msgs',
+                   'data': {'performative': message.performative,
+                            'sender': message.sender,
+                            'routing': message.routing,
+                            'recipient': message.recipient,
+                            'content': message.content.__class__.__name__,
+                            'conversation_id': '0x' + bytes2hexstr(
+                                message.conversation_id),
+                            'management': self._machine_name}})
         await self.send(message)
 
     @classmethod
@@ -152,7 +168,8 @@ class MessageTransportSystem(object):
             machine_name, _, agent_name = aid.partition('/')
             assert machine_name, 'No machine name specified.'
         except AssertionError as exception:
-            raise ValueError('Cannot parse AID "{}":\n\t {}'.format(aid, exception))
+            raise ValueError(
+                'Cannot parse AID "{}":\n\t {}'.format(aid, exception))
 
         return machine_name, agent_name
 
@@ -181,7 +198,9 @@ class MessageTransportSystem(object):
     async def _run(self):
         while self._running:
             await asyncio.sleep(self._interval)
-            log.info("The MessageTransportSystem on '{}' ran an update task.".format(self._machine_name))
+            log.info(
+                "The MessageTransportSystem on '{}' ran an update task.".format(
+                    self._machine_name))
             await self._zigbee_connector.update_others()
 
     @property
@@ -209,7 +228,10 @@ class MessageTransportSystem(object):
             self._unix_connector = None
             log.warning("Could not initialize UnixConnector.")
         try:
-            self._zigbee_connector = ZigBeeConnector(self._loop, machine_name=self.machine_name, callback=self._sync_receive, regex=regex)
+            self._zigbee_connector = ZigBeeConnector(self._loop,
+                                                     machine_name=self.machine_name,
+                                                     callback=self._sync_receive,
+                                                     regex=regex)
         except ConnectorError:
             self._zigbee_connector = None
             log.warning("Could not initialize ZigBeeConnector.")

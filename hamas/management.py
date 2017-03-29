@@ -13,8 +13,8 @@ import itertools
 import logging
 import string
 
-from hamas.agents import Agent, provide
-from hamas.transport.message_transport import MessageTransportSystem
+from .agents import Agent, provide
+from .transport.message_transport import MessageTransportSystem
 
 log = logging.getLogger(__name__)
 

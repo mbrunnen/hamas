@@ -12,10 +12,10 @@ import asyncio
 import logging
 import os
 
-from hamas.exceptions import ConnectorError
-from hamas.transport.fractions import Fraction
-from hamas.transport.messages import Message
 from .connector import Connector
+from ..fractions import Fraction
+from ..messages import Message
+from ...exceptions import ConnectorError
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,8 @@ class UnixConnector(Connector):
 
         if not os.name == 'posix' or not UDS:
             self._address = None
-            raise ConnectorError("Only available on Unix systems or is disabled.")
+            raise ConnectorError(
+                "Only available on Unix systems or is disabled.")
         self._socket_dir = '/tmp/hamas_sockets/'
         self._address = self._socket_dir + mts.machine_name
         self._mtu = 1024
@@ -59,7 +60,8 @@ class UnixConnector(Connector):
             os.remove(self._address)
 
     async def start(self):
-        self._server = await asyncio.start_unix_server(self._receive, self._address)
+        self._server = await asyncio.start_unix_server(self._receive,
+                                                       self._address)
         log.info("{} started.".format(self))
         self.started = True
 
@@ -99,7 +101,8 @@ class UnixConnector(Connector):
     async def unicast(self, machine_name, message):
         log.info("{} unicasts {!r}".format(self.__class__.__name__, message))
         serialized_msg = message.serialize()
-        _, writer = await asyncio.open_unix_connection(os.path.join(self._socket_dir, machine_name))
+        _, writer = await asyncio.open_unix_connection(
+            os.path.join(self._socket_dir, machine_name))
         fractions = Fraction.disassemble(0, serialized_msg, self._mtu)
         lines = [f.serialize() for f in fractions]
         writer.writelines(lines)
@@ -113,6 +116,7 @@ class UnixConnector(Connector):
         others = self.other_machines
         futs = []
         for url in others:
-            futs.append(asyncio.ensure_future(self.unicast(message=message, machine_name=url)))
+            futs.append(asyncio.ensure_future(
+                self.unicast(message=message, machine_name=url)))
         if futs:
             await asyncio.wait(futs)

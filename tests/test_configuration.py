@@ -5,12 +5,9 @@
 #   LICENSE:    MIT
 #   FILE:	test_configuration.py
 # =============================================================================
-"""Test the configuration loader
-"""
+
 from os.path import abspath
-
 import pytest
-
 from hamas import Configuration, ConfigError
 
 
@@ -31,9 +28,11 @@ class TestConfiguration:
         assert conf_2 != conf_3
         assert conf_1 != conf_3
 
-        with open(abspath('./tests/test_configurations/test_eq_1.conf')) as file_1:
+        with open(abspath(
+                './tests/test_configurations/test_eq_1.conf')) as file_1:
             str_1 = file_1.read()
-        with open(abspath('./tests/test_configurations/test_eq_2.conf')) as file_2:
+        with open(abspath(
+                './tests/test_configurations/test_eq_2.conf')) as file_2:
             str_2 = file_2.read()
         assert str_1 != str_2
 

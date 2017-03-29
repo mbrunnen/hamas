@@ -34,15 +34,15 @@ def main():
     am.create_agent(Agent)
     task = asyncio.ensure_future(_print_agents(am))
     try:
+        print("Running...")
         loop.run_forever()
     except KeyboardInterrupt:
-        log.info("Stopping...")
+        print("Stopping...")
         task.cancel()
         am.stop()
-        loop.run_until_complete(asyncio.wait(asyncio.Task.all_tasks()))
-    finally:
+        # loop.run_until_complete(asyncio.wait(asyncio.Task.all_tasks()))
+        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
-
 
 if __name__ == '__main__':
     main()
