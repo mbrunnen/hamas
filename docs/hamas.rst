@@ -1,5 +1,4 @@
 .. toctree::
-------------------------------
 
 .. automodule:: hamas.agents
     :members:

@@ -9,8 +9,8 @@
 
 This module implements the base Agent class. All agents should be derived from
 this class. The agents can have special methods, which can be called by other
-agents and are decorated with the :decorator:`provide()`. To handle their
-conversations they have with other agents they use the :class:`QueueRegister`.
+agents and are decorated with :func:`provide`. To handle their
+conversations they have with other agents they use the :class:`ConversationRegister`.
 """
 
 import asyncio
@@ -27,10 +27,16 @@ from .transport.messages import Message
 log = logging.getLogger(__name__)
 
 
-class QueueRegister(object):
-    """A dictionary containing asyncio queues.
-        Args:
-            _url_queue(dict): The dictionary with the queues
+class ConversationRegister(object):
+    """A dictionary for storing conversations. When a new queue is created, by calling :meth:`new_conversation`, a new
+    :class:`asyncio.Queue` is created and a :class:`asyncio.Future` is returned. The Agent register a new
+    queue, when it started a new conversation and stores messages belonging to this conversation in this queue.
+    The outcome of the conversation will be available in the returned future. The `queue_consumer` is a callback
+    function, which handles the messages of this conversation and decides when the conversation is finished.
+
+    Attributes:
+        _queues(dict): A dictionary with the `qid` as key and the :class:`asyncio.Queue` as value.
+        _queue_futs(dict): A dictionary with the `qid` as key and the :class:`asyncio.Future` as value.
     """
 
     def __init__(self):
@@ -38,12 +44,14 @@ class QueueRegister(object):
         self._queue_futs = collections.defaultdict(asyncio.Future)
 
     def __len__(self):
+        """`len(self)` returns the quantity of unfinished conversations.
+        """
         return len(self._queues)
 
     def __contains__(self, item):
         return item in self._queues
 
-    def new_queue(self, qid, queue_consumer):
+    def new_conversation(self, qid, queue_consumer):
         log.debug(
             "Started a new Queue with ID {}. There are now {:d} queues in this register.".
             format(qid, len(self._queues) + 1))
@@ -79,6 +87,9 @@ class QueueRegister(object):
 
 
 def provide(func):
+    """`provide` acts as function decorator
+    """
+
     func.provided = True
     return func
 
@@ -90,7 +101,7 @@ class Agent(object):
         _aid(str): unique agent identifier
         _mts: The machine, necessary to talk to other agents
         _loop (BaseEventLoop): The loop which runs this agent
-        _queues (QueueRegister): A register for the conversation control.
+        _conversations (ConversationRegister): A register for the conversation control.
     """
 
     _allowed_chars = '/_' + string.ascii_letters + string.digits
@@ -109,7 +120,7 @@ class Agent(object):
         self._mts = mts
         # TODO: pass the loop as argument
         self._loop = mts.loop
-        self._queues = QueueRegister()
+        self._conversations = ConversationRegister()
         # TODO: add timeout attribute
 
     @property
@@ -152,11 +163,11 @@ class Agent(object):
         """
         conv_id = message.conversation_id
         if message.routing == 'unicast':
-            reply_fut = self._queues.new_queue(conv_id,
+            reply_fut = self._conversations.new_conversation(conv_id,
                                                self._message_handler(
                                                    conv_id, timeout, 1))
         elif message.routing == 'broadcast':
-            reply_fut = self._queues.new_queue(conv_id,
+            reply_fut = self._conversations.new_conversation(conv_id,
                                                self._message_handler(
                                                    conv_id, timeout, None))
         else:
@@ -238,9 +249,9 @@ class Agent(object):
             return return_values
 
     async def receive(self, message):
-        if message.conversation_id in self._queues:
+        if message.conversation_id in self._conversations:
             # This agent started the conversation
-            await self._queues.put(message.conversation_id, message)
+            await self._conversations.put(message.conversation_id, message)
         elif message.performative == 'request':
             await self._on_request_cb(message)
         elif message.performative is None:
@@ -266,19 +277,19 @@ class Agent(object):
             try:
                 start = time.monotonic()
                 item = await asyncio.wait_for(
-                    self._queues.get(conv_id), timeout)
+                    self._conversations.get(conv_id), timeout)
             except asyncio.TimeoutError:
                 timeout_reached = True
             else:
                 log.debug('Message queue {} got a new item:\n\t{}'.format(
                     conv_id, item))
-                self._queues.task_done(conv_id)
+                self._conversations.task_done(conv_id)
                 messages.append(item)
             finally:
                 end = time.monotonic()
                 log.debug('Queue {} waited {:.3f}s for new item'.format(
                     conv_id, end - start))
-        self._queues.set_result(conv_id, messages)
+        self._conversations.set_result(conv_id, messages)
 
     async def _on_request_cb(self, message):
         function = message.content.function
