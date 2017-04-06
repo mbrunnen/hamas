@@ -1,15 +1,12 @@
-hamas.transport package
+Messsage Transport
 =======================
 
-Subpackages
+Connectors
 -----------
 
 .. toctree::
 
     hamas.transport.connectors
-
-Submodules
-----------
 
 hamas.transport.contents module
 -------------------------------
@@ -47,15 +44,6 @@ hamas.transport.serializable module
 -----------------------------------
 
 .. automodule:: hamas.transport.serializable
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: hamas.transport
     :members:
     :undoc-members:
     :show-inheritance:

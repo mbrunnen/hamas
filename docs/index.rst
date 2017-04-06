@@ -7,12 +7,14 @@ and still communicate seamless with each other. The communication channels
 are typical for the in-house use, like WLAN or ZigBee.
 
 .. toctree::
-   :maxdepth: 4
-   :numbered:
-   :caption: Contents:
+    :numbered:
+    :caption: Contents:
 
-   hamas
-
+    hamas.agents
+    hamas.management
+    hamas.transport
+    hamas.configuration
+    hamas.miscelleanous
 
 Indices and tables
 ==================

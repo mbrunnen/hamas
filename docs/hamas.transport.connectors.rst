@@ -1,10 +1,7 @@
-hamas.transport.connectors package
+Communication Connectors
 ==================================
 
-Submodules
-----------
-
-hamas.transport.connectors.connector module
+The Connector Base Class
 -------------------------------------------
 
 .. automodule:: hamas.transport.connectors.connector
@@ -12,7 +9,7 @@ hamas.transport.connectors.connector module
     :undoc-members:
     :show-inheritance:
 
-hamas.transport.connectors.local_connector module
+The Local Connector
 -------------------------------------------------
 
 .. automodule:: hamas.transport.connectors.local_connector
@@ -20,18 +17,10 @@ hamas.transport.connectors.local_connector module
     :undoc-members:
     :show-inheritance:
 
-hamas.transport.connectors.platform_connector module
+The Platform Connector
 ----------------------------------------------------
 
 .. automodule:: hamas.transport.connectors.platform_connector
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-hamas.transport.connectors.ports module
----------------------------------------
-
-.. automodule:: hamas.transport.connectors.ports
     :members:
     :undoc-members:
     :show-inheritance:
@@ -52,11 +41,11 @@ hamas.transport.connectors.zigbee_connector module
     :undoc-members:
     :show-inheritance:
 
+Ports
+~~~~~
 
-Module contents
----------------
-
-.. automodule:: hamas.transport.connectors
+.. automodule:: hamas.transport.connectors.ports
     :members:
     :undoc-members:
     :show-inheritance:
+
