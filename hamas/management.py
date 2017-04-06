@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 class AgentPlatform(object):
     _allowed_chars = '_' + string.ascii_letters + string.digits
 
-    def __init__(self, machine_name, loop, update_interval=60,
+    def __init__(self, name, loop, update_interval=60,
                  regex='/dev/ttyUSB'):
         def generate_name():
             gen_new = itertools.count()
@@ -32,11 +32,11 @@ class AgentPlatform(object):
                     yield i
                 yield next(gen_new)
 
-        assert set(machine_name) <= set(
-            self._allowed_chars), "Only {} characters are allowed as machine_name.".format(
+        assert set(name) <= set(
+            self._allowed_chars), "Only {} characters are allowed as platform name.".format(
             self._allowed_chars)
         self._loop = loop
-        self._machine_name = machine_name
+        self.name = name
         self._message_transport = MessageTransportSystem(platform=self,
                                                          update_interval=update_interval,
                                                          regex=regex)
@@ -52,8 +52,8 @@ class AgentPlatform(object):
         self._message_transport.stop()
 
     @property
-    def machine_name(self):
-        return self._machine_name
+    def name(self):
+        return self._name
 
     @property
     def loop(self):
@@ -75,7 +75,7 @@ class AgentPlatform(object):
         """
         assert issubclass(agent_class, Agent)
         agent_name = str(next(self._name_gen))
-        aid = self._machine_name + '/' + agent_name
+        aid = self.name + '/' + agent_name
         agent = agent_class(*args, aid=aid, mts=self._message_transport,
                             **kwargs)
         self.__agents[aid] = agent
@@ -101,7 +101,7 @@ class AgentManager(Agent):
     __in_create = False
 
     @classmethod
-    def create(cls, machine_name, loop, regex='/dev/ttyUSB'):
+    def create(cls, platform_name, loop, regex='/dev/ttyUSB'):
         """Factory function which instantiates a AgentManager agent.
 
         Do not instantiate the AgentManager directly. It is a special
@@ -109,14 +109,14 @@ class AgentManager(Agent):
         Also it will create a MessageTransportSystem.
 
         Arguments:
-            machine_name(str):The management ID must be given. It can read from
+            platform_name(str):The management ID must be given. It can read from
                 a config file.
             loop (BaseEventLoop): The event loop.
             regex(str): The regular expression to find the serial port.
         Returns:
             AgentManager
         """
-        platform = AgentPlatform(machine_name=machine_name, loop=loop,
+        platform = AgentPlatform(platform_name=platform_name, loop=loop,
                                  regex=regex)
         manager = platform.create_agent(AgentManager, platform=platform)
         return manager
@@ -133,8 +133,8 @@ class AgentManager(Agent):
         self._register(self)
 
     @property
-    def other_machines(self):
-        return self._mts.other_machines
+    def other_platforms(self):
+        return self._mts.other_platforms
 
     async def start(self):
         await self._platform.start()

@@ -26,7 +26,7 @@ class UnixConnector(Connector):
     """Connector for agent communication on the same computer."""
 
     def __init__(self, mts):
-        """Initialise the interface with the creating machine.
+        """Initialise the interface with the creating platform.
 
         Args:
             mts (MessageTransportSystem): The calling MessageTransportSystem.
@@ -39,7 +39,7 @@ class UnixConnector(Connector):
             raise ConnectorError(
                 "Only available on Unix systems or is disabled.")
         self._socket_dir = '/tmp/hamas_sockets/'
-        self._address = self._socket_dir + mts.machine_name
+        self._address = self._socket_dir + mts.platform_name
         self._mtu = 1024
         self._mts = mts
         os.makedirs(self._socket_dir, exist_ok=True)
@@ -52,8 +52,8 @@ class UnixConnector(Connector):
         self._server = None
         log.info("{} initialised.".format(self))
 
-    def __contains__(self, machine_name):
-        return machine_name in self.other_machines
+    def __contains__(self, platform_name):
+        return platform_name in self.other_platforms
 
     def __del__(self):
         if self._address and os.path.exists(self._address):
@@ -71,7 +71,7 @@ class UnixConnector(Connector):
             self._server.close()
 
     @property
-    def other_machines(self):
+    def other_platforms(self):
         total = set(os.listdir(self._socket_dir))
         others = list(total.difference([os.path.basename(self._address)]))
         return others
@@ -98,11 +98,11 @@ class UnixConnector(Connector):
         log.info("{} received a message {!r}".format(self._address, message))
         await self._mts.receive(message)
 
-    async def unicast(self, machine_name, message):
+    async def unicast(self, platform_name, message):
         log.info("{} unicasts {!r}".format(self.__class__.__name__, message))
         serialized_msg = message.serialize()
         _, writer = await asyncio.open_unix_connection(
-            os.path.join(self._socket_dir, machine_name))
+            os.path.join(self._socket_dir, platform_name))
         fractions = Fraction.disassemble(0, serialized_msg, self._mtu)
         lines = [f.serialize() for f in fractions]
         writer.writelines(lines)
@@ -113,10 +113,10 @@ class UnixConnector(Connector):
 
     async def broadcast(self, message):
         log.info("{} broadcasts {!r}".format(self.__class__.__name__, message))
-        others = self.other_machines
+        others = self.other_platforms
         futs = []
         for url in others:
             futs.append(asyncio.ensure_future(
-                self.unicast(message=message, machine_name=url)))
+                self.unicast(message=message, platform_name=url)))
         if futs:
             await asyncio.wait(futs)

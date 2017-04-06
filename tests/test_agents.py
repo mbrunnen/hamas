@@ -112,7 +112,7 @@ class TestAgent:
         with unittest.mock.patch.object(mts, 'receive', make_coroutine(mock)):
             agent = Agent(
                 mts,
-                mts.machine_name + '/1', )
+                mts.platform_name + '/1', )
             recipient = 'someone'
             msg = Message(
                 sender=agent.aid,
@@ -126,7 +126,7 @@ class TestAgent:
     async def test_receive_in_q(self, mts):
         agent = Agent(
             mts,
-            mts.machine_name + '/1', )
+            mts.platform_name + '/1', )
         sender = 'someone'
         timeout = 1
         conv_id = uuid.uuid4()
@@ -153,7 +153,7 @@ class TestAgent:
 
         agent = Agent(
             mts,
-            mts.machine_name + '/1', )
+            mts.platform_name + '/1', )
 
         mock = unittest.mock.MagicMock()
         with unittest.mock.patch.object(agent, 'send', make_coroutine(mock)):
@@ -185,7 +185,7 @@ class TestAgent:
 
         agent = Agent(
             mts,
-            mts.machine_name + '/1', )
+            mts.platform_name + '/1', )
 
         mock = unittest.mock.MagicMock()
         with unittest.mock.patch.object(agent, 'send', make_coroutine(mock)):
@@ -220,7 +220,7 @@ class TestAgent:
 
         agent = Agent(
             mts,
-            mts.machine_name + '/1', )
+            mts.platform_name + '/1', )
 
         mock = unittest.mock.MagicMock()
         with unittest.mock.patch.object(agent, 'send', make_coroutine(mock)):
@@ -249,7 +249,7 @@ class TestAgent:
     async def test_receive_belated_rp_reply(self, mts):
         agent = Agent(
             mts,
-            mts.machine_name + '/1', )
+            mts.platform_name + '/1', )
         with unittest.mock.patch(
                 'hamas.management.agents.log.warning') as mock:
             sender = 'someone'
@@ -274,7 +274,7 @@ class TestAgent:
             return coro
 
         cb_mock = unittest.mock.MagicMock()
-        agent = Agent(mts, mts.machine_name + '/1')
+        agent = Agent(mts, mts.platform_name + '/1')
         with unittest.mock.patch.object(agent, 'custom_contents_cb',
                                         make_coro(cb_mock)):
             sender = 'someone'

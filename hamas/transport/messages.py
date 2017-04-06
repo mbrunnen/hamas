@@ -14,7 +14,7 @@ message class is the envelope and the content is the letter. The request class
 is necessary to open a session, which is called conversation. A conversation are
 all messages with the same conversation ID. The normal use case is that an agent
 sends a Request and the receiving agent will answer with an instance of Reply.
-The machine will then match these two messages and establish in that
+The platform will then match these two messages and establish in that
 way a conversation.
 """
 

@@ -164,7 +164,7 @@ class TestMessageTransport:
         class SecretKeeper(Agent):
             def __init__(self, *args, **kwargs):
                 super(SecretKeeper, self).__init__(*args, **kwargs)
-                self.my_secret = 'the earth is flat and my machine_name is {}'.format(self.aid)
+                self.my_secret = 'the earth is flat and my platform_name is {}'.format(self.aid)
 
             async def custom_contents_cb(self, message):
                 assert message.content.string == request_text
@@ -209,20 +209,20 @@ class TestMessageTransport:
                 return self.my_secret
 
         timeout = 1
-        machine1 = AgentPlatform(machine_name='foo1', loop=event_loop)
-        machine2 = AgentPlatform(machine_name='foo2', loop=event_loop)
+        platform1 = AgentPlatform(platform_name='foo1', loop=event_loop)
+        platform2 = AgentPlatform(platform_name='foo2', loop=event_loop)
         with pytest.raises(KeyError):
-            AgentPlatform(machine_name='foo2', loop=event_loop)
+            AgentPlatform(platform_name='foo2', loop=event_loop)
 
-        requester = machine1.create_agent(Agent)
-        replier = machine2.create_agent(SecretKeeper)
+        requester = platform1.create_agent(Agent)
+        replier = platform2.create_agent(SecretKeeper)
 
         reply = await requester.remote_process_call('get_secret', timeout=timeout, recipient=replier.aid)
         assert type(requester) is Agent
         assert type(replier) is SecretKeeper
         assert reply == 'the earth is flat'
-        machine1.stop()
-        machine2.stop()
+        platform1.stop()
+        platform2.stop()
 
     @pytest.mark.asyncio
     async def test_dummy_broadcast(self, event_loop):
@@ -246,14 +246,14 @@ class TestMessageTransport:
             def get_secret(self):
                 return self.my_secret
 
-        machine1 = AgentPlatform('foo1', event_loop)
-        machine2 = AgentPlatform('foo2', event_loop)
+        platform1 = AgentPlatform('foo1', event_loop)
+        platform2 = AgentPlatform('foo2', event_loop)
 
-        requester = machine1.create_agent(Agent)
-        replier1 = machine2.create_agent(SecretKeeper)
-        replier2 = machine2.create_agent(SecretKeeper)
-        receivers1 = [machine1.create_agent(Receiver) for _ in range(5)]
-        receivers2 = [machine2.create_agent(Receiver) for _ in range(5)]
+        requester = platform1.create_agent(Agent)
+        replier1 = platform2.create_agent(SecretKeeper)
+        replier2 = platform2.create_agent(SecretKeeper)
+        receivers1 = [platform1.create_agent(Receiver) for _ in range(5)]
+        receivers2 = [platform2.create_agent(Receiver) for _ in range(5)]
 
         for agent in receivers1:
             assert agent.text == ''
@@ -277,8 +277,8 @@ class TestMessageTransport:
         for agent in receivers2:
             assert agent.text == 'get_secret'
 
-        machine1.stop()
-        machine2.stop()
+        platform1.stop()
+        platform2.stop()
 
     def test_parse_aid(self):
         address_1 = 'foo/32'
@@ -294,13 +294,13 @@ class TestMessageTransport:
         address_3 = '/3'
         with pytest.raises(ValueError) as exc:
             MessageTransportSystem.parse_aid(address_3)
-        assert exc.match('No machine name specified')
+        assert exc.match('No platform name specified')
 
         # TODO: Move this to agent_platform init test
         # address_4 = 'ungültig/3'
         # with pytest.raises(ValueError) as exc:
         #     MessageTransportSystem.parse_aid(address_4)
-        # assert exc.match('are allowed as machine name.')
+        # assert exc.match('are allowed as platform name.')
 
         # address_5 = 'foo//3'
         # with pytest.raises(ValueError) as exc:
@@ -316,22 +316,22 @@ class TestMessageTransport:
 @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
 class TestZigBee:
     @pytest.mark.asyncio
-    async def test_update_task(self, machine_name, event_loop):
-        ap = AgentPlatform(machine_name, event_loop, update_interval=0.1)
+    async def test_update_task(self, platform_name, event_loop):
+        ap = AgentPlatform(platform_name, event_loop, update_interval=0.1)
         mts = ap._message_transport
         log.debug("{} Started...".format(mts))
         mts.start()
         await asyncio.sleep(1)
         mts.stop()
-        assert mts.other_machines == ['remote_machine']
+        assert mts.other_platforms == ['remote_platform']
         mts.stop()
 
 
 @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
 class TestRemote:
     @pytest.mark.asyncio
-    async def test_update_machine_register(self, event_loop):
-        ap = AgentPlatform('remote_machine', event_loop, update_interval=0.1)
+    async def test_update_platform_register(self, event_loop):
+        ap = AgentPlatform('remote_platform', event_loop, update_interval=0.1)
         mts = ap._message_transport
         log.debug("{} Listening...".format(mts))
         try:

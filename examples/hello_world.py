@@ -28,9 +28,9 @@ async def _print_agents(agent_manager):
 
 def main():
     loop = asyncio.get_event_loop()
-    machine_name = 'foo'
+    platform_name = 'foo'
     regex = '/dev/ttyUSB'
-    am = AgentManager.create(machine_name, loop, regex=regex)
+    am = AgentManager.create(platform_name, loop, regex=regex)
     am.create_agent(Agent)
     task = asyncio.ensure_future(_print_agents(am))
     try:

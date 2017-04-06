@@ -11,7 +11,7 @@ This corresponds to the data link layer in the OSI model. Frames are sent from
 one node to another. Multiple frames can be part of one message. The purpose
 of this module is to fragment messages in fractions, regarding the MTU,
 and to send them. Also received frames will be assembled to a message and be
-delivered to the machine. Another Function will be a integrity
+delivered to the message transport system. Another Function will be a integrity
 check.
 """
 
@@ -54,7 +54,7 @@ class ZigBeeConnector(Connector):
 
     def __init__(self,
                  loop,
-                 machine_name,
+                 platform_name,
                  regex='/dev/ttyUSB',
                  baud=230400,
                  callback=None,
@@ -114,15 +114,15 @@ class ZigBeeConnector(Connector):
         assert not callback or (not asyncio.iscoroutinefunction(callback))
         self._callback = callback
         self._zigbee = ZigBee(self._serial, callback=self._receive_cb)
-        self._other_machines = {}
+        self._other_platforms = {}
         self._joined = asyncio.Event()
         self._ports_opened = asyncio.Event()
         self._current_frame_id = 0
         self._current_fraction_id = 0
-        # For network discovery the machine name has to fit in one fraction
-        assert len(machine_name) <= Fraction.max_sdu_len(
-            self._mtu), "The machine name is too long"
-        self._machine_name = machine_name
+        # For network discovery the platform name has to fit in one fraction
+        assert len(platform_name) <= Fraction.max_sdu_len(
+            self._mtu), "The platform name is too long"
+        self._platform_name = platform_name
         self._ports = [
             Port(i, self, ucast_timeout, self._mtu)
             for i in range(Fraction.max_ports() - 1)
@@ -130,8 +130,8 @@ class ZigBeeConnector(Connector):
         log.info("{} initialised with address {}.".format(
             self.__class__.__name__, self._address))
 
-    def __contains__(self, machine_url):
-        return machine_url in self._other_machines.keys()
+    def __contains__(self, platform_url):
+        return platform_url in self._other_platforms.keys()
 
     @property
     def mtu(self):
@@ -142,8 +142,8 @@ class ZigBeeConnector(Connector):
         return self._address
 
     @property
-    def machine_name(self):
-        return self._machine_name
+    def platform_name(self):
+        return self._platform_name
 
     def _generate_frame_id(self):
         """Create an approximately unique frame ID between 1-255.
@@ -311,7 +311,7 @@ class ZigBeeConnector(Connector):
         fraction = Fraction.deserialize(serialized_frac)
         if fraction.port == 0xff and (fraction.flag == 'URL' or
                                       fraction.flag == 'JOIN'):
-            asyncio.ensure_future(self._add_machine(source_address, fraction))
+            asyncio.ensure_future(self._add_platform(source_address, fraction))
         else:
             asyncio.ensure_future(
                 self._ports[fraction.port].receive(source_address, fraction))
@@ -363,43 +363,43 @@ class ZigBeeConnector(Connector):
         """ Get the other participants in the network.
 
         """
-        frac = Fraction(port=0xff, flag='JOIN', sdu=self.machine_name.encode())
+        frac = Fraction(port=0xff, flag='JOIN', sdu=self.platform_name.encode())
         await self.broadcast_fraction(frac)
 
-    async def _add_machine(self, source_address, fraction):
-        source_machine_name = fraction.sdu.decode()
+    async def _add_platform(self, source_address, fraction):
+        source_platform_name = fraction.sdu.decode()
         if fraction.flag == 'JOIN':
             # passive add
-            log.info("Added machine '{}' with address {}.".format(
-                source_machine_name, source_address))
-            self._other_machines[source_machine_name] = source_address
+            log.info("Added platform '{}' with address {}.".format(
+                source_platform_name, source_address))
+            self._other_platforms[source_platform_name] = source_address
             response = Fraction(
-                0xff, flag='URL', sdu=self._machine_name.encode())
+                0xff, flag='URL', sdu=self._platform_name.encode())
             await self._ports_opened.wait()
             await self.send_fraction(source_address, response)
             self._joined.set()
         elif fraction.flag == 'URL':
             # active add
-            self._other_machines[source_machine_name] = source_address
+            self._other_platforms[source_platform_name] = source_address
             self._joined.set()
         else:
             log.warning("Got a {} fraction on reserved port 255 from {}.".
                         format(fraction.flag, source_address))
 
     async def wait_for_others(self):
-        log.info("Waiting for other machines...")
+        log.info("Waiting for other platforms...")
         await self._joined.wait()
         self._joined.clear()
 
     @property
-    def other_machines(self):
-        return list(self._other_machines.keys())
+    def other_platforms(self):
+        return list(self._other_platforms.keys())
 
-    async def unicast(self, machine_name, message):
+    async def unicast(self, platform_name, message):
         """
 
         Args:
-            machine_name:
+            platform_name:
             message:
 
         Raises:
@@ -408,7 +408,7 @@ class ZigBeeConnector(Connector):
         """
         start = time.monotonic()
         assert type(message) is Message
-        address = self._other_machines[machine_name]
+        address = self._other_platforms[platform_name]
         serialized = message.serialize()
         for port in self._get_port():
             try:
@@ -438,7 +438,7 @@ class ZigBeeConnector(Connector):
                             'conversation_id':
                             '0x' + bytes2hexstr(message.conversation_id),
                             'management':
-                            self._machine_name,
+                            self._platform_name,
                             'port':
                             port.number,
                             'bytes':
@@ -457,10 +457,10 @@ class ZigBeeConnector(Connector):
         assert type(message) is Message
 
         futs = []
-        for m in self.other_machines:
+        for m in self.other_platforms:
             futs.append(
                 asyncio.ensure_future(
-                    self.unicast(message=message, machine_name=m)))
+                    self.unicast(message=message, platform_name=m)))
         if futs:
             await asyncio.wait(futs)
 

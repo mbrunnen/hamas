@@ -5,9 +5,6 @@
 #   LICENSE:    MIT
 #   FILE:	    conftest.py
 # =============================================================================
-"""Test fixtures
-"""
-
 import tempfile
 
 import pytest
@@ -16,23 +13,23 @@ from hamas import AgentManager, ZigBeeConnector, AgentPlatform
 
 
 @pytest.fixture
-def machine_name():
+def platform_name():
     return 'foo'
 
 
 @pytest.fixture
-def am(event_loop, machine_name):
-    """Create an instance of an machine_manager for each test."""
-    machine_manager = AgentManager.create(machine_name, event_loop)
-    yield machine_manager
-    machine_manager.stop()
-    del machine_manager._platform._message_transport._platform_connector
+def am(event_loop, platform_name):
+    # Create an agent manager for each test.
+    agent_manager = AgentManager.create(platform_name, event_loop)
+    yield agent_manager
+    agent_manager.stop()
+    del agent_manager._platform._message_transport._platform_connector
 
 
 @pytest.fixture
-def ap(event_loop, machine_name):
-    """Create an instance of an machine_manager for each test."""
-    platform = AgentPlatform(machine_name, event_loop)
+def ap(event_loop, platform_name):
+    # Create a agent platform for each test.
+    platform = AgentPlatform(platform_name, event_loop)
     yield platform
     platform.stop()
     del platform
@@ -40,7 +37,7 @@ def ap(event_loop, machine_name):
 
 @pytest.fixture
 def mts(ap):
-    """Create an instance of MessageTransportSystem for each test."""
+    # Create a message transport system for each test.
     return ap._message_transport
 
 
@@ -50,8 +47,8 @@ def tmpfile():
 
 
 @pytest.fixture
-def zb(event_loop, machine_name):
-    zigbee = ZigBeeConnector(event_loop, machine_name)
+def zb(event_loop, platform_name):
+    zigbee = ZigBeeConnector(event_loop, platform_name)
     yield zigbee
     zigbee.stop()
 

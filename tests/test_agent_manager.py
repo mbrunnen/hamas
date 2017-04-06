@@ -43,7 +43,7 @@ class TestAgentManager:
         assert ama.aid == 'foo/0'
         assert isinstance(ama._loop, asyncio.BaseEventLoop)
         assert type(ama._mts) is MessageTransportSystem
-        assert ama.machine_name == 'foo'
+        assert ama.platform_name == 'foo'
         assert type(ama._white_pages) is dict
         assert ama.aid in ama._mts._local_connector
         ama.stop()
@@ -217,48 +217,48 @@ class TestAgentManager:
 
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
     class TestZigbee:
-        # Run this on the local machine
+        # Run this on the local platform
         @pytest.mark.asyncio
         async def test_start(self, am):
             log.setLevel(logging.DEBUG)
-            assert not am._machine._dummy_connector
+            assert not am._platform._dummy_connector
             await am.start()
             agent = am.create_agent(Agent)
-            known_machines = am.mts.other_machines
-            assert known_machines == ['remote_machine']
-            # remote_am_aid = known_machines[0] + '/0'
-            remote_am_aid = known_machines[0]
+            known_platforms = am.mts.other_platforms
+            assert known_platforms == ['remote_platform']
+            # remote_am_aid = known_platforms[0] + '/0'
+            remote_am_aid = known_platforms[0]
             agent_aids = await agent.remote_process_call('get_agents', 'Agent', recipient=remote_am_aid, timeout=10)
             print(agent_aids)
-            assert agent_aids == {'Agent': ['remote_machine/1', 'remote_machine/2']}
+            assert agent_aids == {'Agent': ['remote_platform/1', 'remote_platform/2']}
 
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
     class TestZigbeeMac:
-        # Run this on the local machine
+        # Run this on the local platform
         @pytest.mark.asyncio
-        async def test_join_platform(self, machine_name, event_loop):
-            am = AgentManager.create(machine_name, event_loop, 'cu.usbserial')
+        async def test_join_platform(self, platform_name, event_loop):
+            am = AgentManager.create(platform_name, event_loop, 'cu.usbserial')
             try:
                 log.setLevel(logging.DEBUG)
                 await am.start()
                 agent = am.create_agent(Agent)
-                known_machines = am.mts.other_machines
-                assert known_machines == ['remote_machine']
-                remote_am_aid = known_machines[0] + '/0'
+                known_platforms = am.mts.other_platforms
+                assert known_platforms == ['remote_platform']
+                remote_am_aid = known_platforms[0] + '/0'
                 agent_aids = await agent.remote_process_call('get_agents', 'Agent', address=remote_am_aid, timeout=10)
                 print(agent_aids)
-                assert agent_aids == {'Agent': ['remote_machine/1', 'remote_machine/2']}
+                assert agent_aids == {'Agent': ['remote_platform/1', 'remote_platform/2']}
             finally:
                 am.stop()
 
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
     class TestRemote:
-        # Run this on the remote machine
+        # Run this on the remote platform
         @pytest.mark.asyncio
         async def test_join_platform(self, event_loop):
             log.setLevel(logging.DEBUG)
-            machine_name = 'remote_machine'
-            am = AgentManager.create(machine_name=machine_name, loop=event_loop)
+            platform_name = 'remote_platform'
+            am = AgentManager.create(platform_name=platform_name, loop=event_loop)
             try:
                 am.create_agent(Agent)
                 am.create_agent(Agent)

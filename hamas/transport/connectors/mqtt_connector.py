@@ -35,15 +35,15 @@ class MqttConnector(Connector):
         super(MqttConnector, self).__init__()
         self._mts = mts
         self.client = mqtt.Client()
-        self._address = mts.machine_name
+        self._address = mts.platform_name
         self.client.connect(broker, 1883, 60)
         self.client.on_connect = self._on_connect_cb
         self.client.on_message = self._on_message_cb
         self._connected = asyncio.Event()
         self._others = list()
 
-    def __contains__(self, machine_name):
-        return machine_name in self._others
+    def __contains__(self, platform_name):
+        return platform_name in self._others
 
     def _on_connect_cb(self, client, userdata, flags, rc):
         log.info("Connected via MQTT with result code %i.", rc)
@@ -69,7 +69,7 @@ class MqttConnector(Connector):
         self.client.publish('others/request', self._address)
 
     def _register(self):
-        """Register this machine in the MQTT network.
+        """Register this platform in the MQTT network.
         """
         self.update_others()
 
@@ -81,7 +81,7 @@ class MqttConnector(Connector):
         self.client.disconnect()
 
     @property
-    def other_machines(self):
+    def other_platforms(self):
         total = set(os.listdir(self._socket_dir))
         others = list(total.difference([os.path.basename(self._address)]))
         return others
@@ -108,11 +108,11 @@ class MqttConnector(Connector):
         log.info("{} received a message {!r}".format(self._address, message))
         await self._mts.receive(message)
 
-    async def unicast(self, machine_name, message):
+    async def unicast(self, platform_name, message):
         log.info("{} unicasts {!r}".format(self.__class__.__name__, message))
         serialized_msg = message.serialize()
         _, writer = await asyncio.open_unix_connection(
-            os.path.join(self._socket_dir, machine_name))
+            os.path.join(self._socket_dir, platform_name))
         fractions = Fraction.disassemble(0, serialized_msg, self._mtu)
         lines = [f.serialize() for f in fractions]
         writer.writelines(lines)
@@ -123,11 +123,11 @@ class MqttConnector(Connector):
 
     async def broadcast(self, message):
         log.info("{} broadcasts {!r}".format(self.__class__.__name__, message))
-        others = self.other_machines
+        others = self.other_platforms
         futs = []
         for url in others:
             futs.append(
                 asyncio.ensure_future(
-                    self.unicast(message=message, machine_name=url)))
+                    self.unicast(message=message, platform_name=url)))
         if futs:
             await asyncio.wait(futs)

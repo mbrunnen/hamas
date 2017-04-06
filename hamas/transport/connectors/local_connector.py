@@ -5,14 +5,14 @@
 #   LICENSE:    MIT
 #   FILE:	local_connector.py
 # =============================================================================
-"""Communication interface for agents on the same machine.
+"""Communication interface for agents on the same platform.
 """
 
 import asyncio
 
 
 class LocalConnector(object):
-    """Connector class for communication on the same machine.
+    """Connector class for communication on the same platform.
 
     """
 

@@ -22,7 +22,7 @@ class Connector(abc.ABC):
         return '{} on {}'.format(self.__class__.__name__, self.address)
 
     @abc.abstractmethod
-    def __contains__(self, machine_url):
+    def __contains__(self, platform_url):
         pass
 
     @property
@@ -32,11 +32,11 @@ class Connector(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def other_machines(self):
+    def other_platforms(self):
         pass
 
     @abc.abstractmethod
-    def unicast(self, machine_name, message):
+    def unicast(self, platform_name, message):
         pass
 
     @abc.abstractmethod

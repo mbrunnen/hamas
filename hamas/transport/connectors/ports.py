@@ -12,10 +12,10 @@ transmission control, whereas the broadcast port has no transmission control.
 Enabling broadcasting on the transmission controlled ports would add a lot
 of complexity and would make them potentially less reliable. Furthermore,
 broadcasting is in our use case only for short messages and is considered
-unreliable. It suffices if any other machine receives the message and it is
-unnecessary to ensure that all other machines receive the broadcast. The
+unreliable. It suffices if any other platform receives the message and it is
+unnecessary to ensure that all other platforms receive the broadcast. The
 broadcast port is also used for network discovery, that means to map the
-machine name to the ZigBee address. The unicast ports are implemented as
+platform name to the ZigBee address. The unicast ports are implemented as
 Moore automata, i.e. the outputs are defined by the states.
 """
 import asyncio

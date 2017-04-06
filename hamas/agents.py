@@ -5,11 +5,8 @@
 #   LICENSE:    MIT
 #   FILE:	agents.py
 # =============================================================================
-"""The Agent Module
-
-This module implements the base Agent class. All agents should be derived from
-this class. The agents can have special methods, which can be called by other
-agents and are decorated with :func:`provide`. To handle their
+"""The agent module implements the base :class:`Agent` class. All agents should be derived from this class. The agents
+can have special methods, which can be called by other agents and are decorated with :func:`provide`. To handle their
 conversations they have with other agents they use the :class:`ConversationRegister`.
 """
 
@@ -28,66 +25,84 @@ log = logging.getLogger(__name__)
 
 
 class ConversationRegister(object):
-    """A dictionary for storing conversations. When a new queue is created, by calling :meth:`new_conversation`, a new
-    :class:`asyncio.Queue` is created and a :class:`asyncio.Future` is returned. The Agent register a new
-    queue, when it started a new conversation and stores messages belonging to this conversation in this queue.
-    The outcome of the conversation will be available in the returned future. The `queue_consumer` is a callback
-    function, which handles the messages of this conversation and decides when the conversation is finished.
+    """A dictionary for storing the conversations. When a new conversation is created, by calling
+    :meth:`new_conversation`, a new :class:`asyncio.Queue` is created and a :class:`asyncio.Future` is returned.
+    Every message has a conversation identifier, so the agent can group all messages with the same conversation ID in
+    this register. The agent can :meth:`put` new messages in this register, but it can also :meth:`get` a message when
+    it has time to process a message. When the agent considers a conversation as finished, it can set a result for this
+    conversation in the corresponding `future`.
 
     Attributes:
-        _queues(dict): A dictionary with the `qid` as key and the :class:`asyncio.Queue` as value.
-        _queue_futs(dict): A dictionary with the `qid` as key and the :class:`asyncio.Future` as value.
+        _queues(dict): A dictionary with the conversation ID `conv_id` as key and a :class:`asyncio.Queue` as value.
+        _futs(dict): A dictionary with the conversation ID `conv_id` as key and a :class:`asyncio.Future` as value.
     """
 
     def __init__(self):
         self._queues = collections.defaultdict(asyncio.Queue)
-        self._queue_futs = collections.defaultdict(asyncio.Future)
+        self._futs = collections.defaultdict(asyncio.Future)
 
     def __len__(self):
         """`len(self)` returns the quantity of unfinished conversations.
         """
         return len(self._queues)
 
-    def __contains__(self, item):
-        return item in self._queues
+    def __contains__(self, conv_id):
+        """`conv_id in self` returns `True` or `False`, whether `conv_id` is an active conversation or not.
+        """
+        return conv_id in self._queues
 
-    def new_conversation(self, qid, queue_consumer):
+    def new_conversation(self, conv_id):
+        """Allocate a new conversation including a :class:`asyncio.Queue` and a :class:`asyncio.Future`.
+
+        Arguments:
+            conv_id(bytes): The key which allows access to the conversation.
+        """
         log.debug(
             "Started a new Queue with ID {}. There are now {:d} queues in this register.".
-            format(qid, len(self._queues) + 1))
-        assert qid not in self
-        queue_fut = asyncio.Future()
-        self._queue_futs[qid] = queue_fut
+            format(conv_id, len(self._queues) + 1))
+        assert conv_id not in self
+        fut = asyncio.Future()
+        self._futs[conv_id] = fut
         queue = asyncio.Queue()
-        self._queues[qid] = queue
-        asyncio.ensure_future(queue_consumer)
+        self._queues[conv_id] = queue
         if len(self._queues) > 100:
             log.warning("The list of queues is getting long: {:d}".format(
                 len(self._queues)))
-        return queue_fut
+        return fut
 
-    async def put(self, qid, item):
-        assert qid in self
-        await self._queues[qid].put(item)
+    async def put(self, conv_id, msg):
+        """Put a new message in the register.
 
-    async def get(self, qid):
-        assert qid in self
-        return await self._queues[qid].get()
+        Arguments:
+            conv_id(bytes): The key which allows access to the conversation.
+            msg(Message): The incoming message associated with this conversation.
+        """
+        assert conv_id in self
+        await self._queues[conv_id].put(msg)
 
-    def task_done(self, qid):
-        self._queues[qid].task_done()
+    async def get(self, conv_id):
+        """Remove and return an item from the queue. If queue is empty, wait until an item is available.
 
-    def set_result(self, qid, result):
-        log.debug('Finished queue {}.'.format(qid))
+        Arguments:
+            conv_id(bytes): The key which allows access to the conversation.
+        Returns:
+            msg(Message): The incoming message associated with this conversation.
+        """
+        assert conv_id in self
+        return await self._queues[conv_id].get()
+
+    def set_result(self, conv_id, result):
+        log.debug('Finished queue {}.'.format(conv_id))
         # the queue is now considered finished
-        self._queues.pop(qid)
-        queue_fut = self._queue_futs.pop(qid)
+        self._queues.pop(conv_id)
+        fut = self._futs.pop(conv_id)
         # in the case there are more than one consumer
-        queue_fut.set_result(result)
+        fut.set_result(result)
 
 
 def provide(func):
-    """`provide` acts as function decorator
+    """:func:`provide` acts as function decorator and is used for methods, that the agent provides as a service to other
+    agents.
     """
 
     func.provided = True
@@ -95,25 +110,18 @@ def provide(func):
 
 
 class Agent(object):
-    """Agent Base Class
+    """The base class for all other agents. An instance is already able to communicate to other instances. In
+    particular, it uses a :class:`ConversationRegister` and a :class:`MessageTransportSystem` for the connunication with
+    other agents.
 
-    Attributes:
-        _aid(str): unique agent identifier
-        _mts: The machine, necessary to talk to other agents
-        _loop (BaseEventLoop): The loop which runs this agent
-        _conversations (ConversationRegister): A register for the conversation control.
+    Args:
+        aid(str): The agent's unique identifier.
+        mts(MessageTransportSystem): The :class:`MessageTransportSystem` used by this agent.
     """
 
     _allowed_chars = '/_' + string.ascii_letters + string.digits
 
     def __init__(self, mts, aid):
-        """Initialise an agent
-
-        Args:
-            aid(str): unique agent URL
-            mts(MessageTransportSystem): TODO
-        """
-
         assert set(aid) <= set(
             self._allowed_chars), "{} is not allowed as AID.".format(aid)
         self._aid = aid
@@ -125,15 +133,21 @@ class Agent(object):
 
     @property
     def aid(self):
+        """str: The unique agent identifier. Composed of the platform name and an agent name.
+        """
         return self._aid
 
     @property
     def am_aid(self):
-        return self._mts.machine_name + '/0'
+        """str: The agent identifier of the :class:`AgentManager`.
+        """
+        return self._mts.platform_name + '/0'
 
     @property
-    def machine_name(self):
-        return self._mts.machine_name
+    def platform_name(self):
+        """str: The first part of the agent's indentifier, the platform name
+        """
+        return self._mts.platform_name
 
     @provide
     def get_aid(self):
@@ -163,13 +177,12 @@ class Agent(object):
         """
         conv_id = message.conversation_id
         if message.routing == 'unicast':
-            reply_fut = self._conversations.new_conversation(conv_id,
-                                               self._message_handler(
-                                                   conv_id, timeout, 1))
+            reply_fut = self._conversations.new_conversation(conv_id)
+            asyncio.ensure_future(self._message_handler(conv_id, timeout, 1))
         elif message.routing == 'broadcast':
-            reply_fut = self._conversations.new_conversation(conv_id,
-                                               self._message_handler(
-                                                   conv_id, timeout, None))
+            reply_fut = self._conversations.new_conversation(conv_id)
+            asyncio.ensure_future(
+                self._message_handler(conv_id, timeout, None))
         else:
             raise TransmissionError(
                 'Unknown routing {}.'.format(message.routing))
@@ -276,18 +289,17 @@ class Agent(object):
         while not stop_condition():
             try:
                 start = time.monotonic()
-                item = await asyncio.wait_for(
+                msg = await asyncio.wait_for(
                     self._conversations.get(conv_id), timeout)
             except asyncio.TimeoutError:
                 timeout_reached = True
             else:
-                log.debug('Message queue {} got a new item:\n\t{}'.format(
-                    conv_id, item))
-                self._conversations.task_done(conv_id)
-                messages.append(item)
+                log.debug('Message queue {} got a new message:\n\t{}'.format(
+                    conv_id, msg))
+                messages.append(msg)
             finally:
                 end = time.monotonic()
-                log.debug('Queue {} waited {:.3f}s for new item'.format(
+                log.debug('Queue {} waited {:.3f}s for new message'.format(
                     conv_id, end - start))
         self._conversations.set_result(conv_id, messages)
 

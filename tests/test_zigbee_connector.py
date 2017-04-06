@@ -40,23 +40,23 @@ class TestZigbee:
     """Test Case for the ZigBee interface"""
 
     @pytest.mark.skipif(not TESTNOZIGBEE, reason="Set $HAMASNOZIGBEE to test it.")
-    def test_nozigbee(self, event_loop, machine_name):
+    def test_nozigbee(self, event_loop, platform_name):
         with pytest.raises(ConnectorError) as exception:
-            ZigBeeConnector(event_loop, machine_name)
+            ZigBeeConnector(event_loop, platform_name)
         exception.match('ZigBee is disabled.')
 
     @pytest.mark.skipif(not TESTNOTCONNECTED, reason="ZigBee module available.")
-    def test_not_connected(self, event_loop, machine_name):
+    def test_not_connected(self, event_loop, platform_name):
         with pytest.raises(ConnectorError) as exception:
-            ZigBeeConnector(event_loop, machine_name)
+            ZigBeeConnector(event_loop, platform_name)
         exception.match('No serial device found.')
 
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled.")
-    def test_create(self, event_loop, machine_name):
+    def test_create(self, event_loop, platform_name):
         usbport = '/dev/ttyUSB'
         ports = [fd for fd, p, i in serial.tools.list_ports.grep(usbport)]
         assert len(ports) == 1
-        zb = ZigBeeConnector(event_loop, machine_name)
+        zb = ZigBeeConnector(event_loop, platform_name)
         assert type(zb._serial) is serial.Serial
         assert isinstance(zb._loop, asyncio.BaseEventLoop)
         assert zb._callback is None
@@ -79,10 +79,10 @@ class TestZigbee:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
-    async def test_send_command(self, event_loop, machine_name):
+    async def test_send_command(self, event_loop, platform_name):
         """ Get the other participants in the network.
         """
-        zb = ZigBeeConnector(event_loop, machine_name, serial_timeout=10)
+        zb = ZigBeeConnector(event_loop, platform_name, serial_timeout=10)
         await zb.start()
         responses = await zb.send_command(cmd='at', command=b'ND', num_items=2)
         assert len(responses) == 2
@@ -97,8 +97,8 @@ class TestZigbee:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
-    async def test_transmission_failed(self, event_loop, machine_name):
-        zb = ZigBeeConnector(event_loop, machine_name, serial_timeout=0.1, others_timeout=1)
+    async def test_transmission_failed(self, event_loop, platform_name):
+        zb = ZigBeeConnector(event_loop, platform_name, serial_timeout=0.1, others_timeout=1)
         await zb.start()
         addr = '00:12:34:56:78:9A:BC:DF!ABCD'
         with pytest.raises(TransmissionError) as exc:
@@ -147,8 +147,8 @@ class TestZigbee:
 
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
     @pytest.mark.asyncio
-    async def test_get_address(self, event_loop, machine_name):
-        zb = ZigBeeConnector(event_loop, machine_name)
+    async def test_get_address(self, event_loop, platform_name):
+        zb = ZigBeeConnector(event_loop, platform_name)
         await zb.start()
         assert zb.address == '00:13:A2:00:41:48:13:5F!0000'
         response_high = await zb.send_command(cmd='at', command=b'SH', num_items=1)
@@ -164,18 +164,18 @@ class TestZigbee:
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_update_others_requesting(self, event_loop):
         log.setLevel(logging.DEBUG)
-        zb = ZigBeeConnector(event_loop, 'updating_machine')
+        zb = ZigBeeConnector(event_loop, 'updating_platform')
         try:
-            others = zb.other_machines
+            others = zb.other_platforms
             assert len(others) == 0
             await zb.start()
             await zb.wait_for_others()
             await asyncio.sleep(10)
-            others = zb._other_machines
+            others = zb._other_platforms
             assert len(others) > 0
-            print("Other Machines found: {}".format(zb.other_machines))
+            print("Other Machines found: {}".format(zb.other_platforms))
             if len(others) == 1:
-                assert re.match('00:13:A2:00:41:48:13:77!', others['receiving_machine'])
+                assert re.match('00:13:A2:00:41:48:13:77!', others['receiving_platform'])
             else:
                 assert re.match('00:13:A2:00:41:48:13:77!', others['emasem01'])
                 assert re.match('00:13:A2:00:41:48:12:EA!', others['emasem02'])
@@ -185,8 +185,8 @@ class TestZigbee:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
-    async def test_get_mtu(self, event_loop, machine_name):
-        zb = ZigBeeConnector(event_loop, machine_name)
+    async def test_get_mtu(self, event_loop, platform_name):
+        zb = ZigBeeConnector(event_loop, platform_name)
         await zb.start()
         mtu = await zb.get_mtu()
         assert mtu == 255
@@ -201,15 +201,15 @@ class TestZigbee:
 
         log.setLevel(logging.INFO)
 
-        zb = ZigBeeConnector(event_loop, 'sending_machine', callback=reply_received)
+        zb = ZigBeeConnector(event_loop, 'sending_platform', callback=reply_received)
         text = ''.join(random.choice(string.printable) for _ in range(2500))
         try:
             got_reply = asyncio.Future()
             await zb.start()
-            assert len(zb.other_machines) == 1
-            msg = Message(sender=zb.machine_name, content=StringContent(text))
+            assert len(zb.other_platforms) == 1
+            msg = Message(sender=zb.platform_name, content=StringContent(text))
             start = time.monotonic()
-            await zb.unicast(message=msg, machine_name=zb.other_machines[0])
+            await zb.unicast(message=msg, platform_name=zb.other_platforms[0])
             tm_end = time.monotonic()
             reply = await got_reply
             rp_end = time.monotonic()
@@ -230,17 +230,17 @@ class TestZigbee:
 
         log.setLevel(logging.DEBUG)
 
-        zb = ZigBeeConnector(event_loop, 'sending_machine', callback=reply_received)
+        zb = ZigBeeConnector(event_loop, 'sending_platform', callback=reply_received)
         text = ''.join(random.choice(string.printable) for _ in range(5 * Fraction.max_sdu_len()))
         try:
             replies = asyncio.Queue()
-            msg = Message(sender=zb.machine_name, content=StringContent(text))
+            msg = Message(sender=zb.platform_name, content=StringContent(text))
             await zb.start()
             await zb.wait_for_others()
             start = time.monotonic()
             await zb.broadcast(message=msg)
             tm_end = time.monotonic()
-            for i, _ in enumerate(zb.other_machines):
+            for i, _ in enumerate(zb.other_platforms):
                 reply = await replies.get()
                 rp_end = time.monotonic()
                 assert reply.content == msg.content
@@ -302,7 +302,7 @@ class TestRemote:
                 received_msg = await got_message
                 reply = Message(sender=zb.address, content=received_msg.content)
                 try:
-                    await zb.unicast(message=reply, machine_name='sending_machine')
+                    await zb.unicast(message=reply, platform_name='sending_platform')
                 except TransmissionError as exc:
                     log.exception(exc)
                 log.info("Finished. Here is the message again:\n\t{}".format(received_msg.content.string))
@@ -329,7 +329,7 @@ class TestRemote:
                 received_msg = await got_message
                 reply = Message(sender=zb.address, content=received_msg.content)
                 try:
-                    await zb.unicast(message=reply, machine_name='sending_machine')
+                    await zb.unicast(message=reply, platform_name='sending_platform')
                 except TransmissionError as exc:
                     log.exception(exc)
                 log.info("Finished. Here is the message again:\n\t{}".format(received_msg.content.string))
