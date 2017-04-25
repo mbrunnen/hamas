@@ -18,8 +18,10 @@ from hamas.transport import DictionaryContent
 
 log = logging.getLogger(__name__)
 
-TESTNOZIGBEE = 'HAMASNOZIGBEE' in os.environ.keys() and os.environ['HAMASNOZIGBEE'] == '1'
-TESTNOTCONNECTED = not [fd for fd, p, i in serial.tools.list_ports.grep('/dev/ttyUSB')] and not TESTNOZIGBEE
+TESTNOZIGBEE = 'HAMASNOZIGBEE' in os.environ.keys() and os.environ[
+                                                            'HAMASNOZIGBEE'] == '1'
+TESTNOTCONNECTED = not [fd for fd, p, i in serial.tools.list_ports.grep(
+    '/dev/ttyUSB')] and not TESTNOZIGBEE
 TESTZIGBEE = not TESTNOZIGBEE and not TESTNOTCONNECTED
 
 
@@ -133,7 +135,8 @@ class TestAgentManager:
 
         addresses = am.get_agents()
         addresses['MyAgent'] = sorted(addresses['MyAgent'])
-        assert addresses == {'AgentManager': [am.aid], 'Agent': [agent1.aid], 'MyAgent': [agent2.aid, agent3.aid]}
+        assert addresses == {'AgentManager': [am.aid], 'Agent': [agent1.aid],
+                             'MyAgent': [agent2.aid, agent3.aid]}
 
     @pytest.mark.asyncio
     async def test_request_myagent(self, am):
@@ -143,7 +146,8 @@ class TestAgentManager:
 
         agent = am.create_agent(MyAgent)
 
-        addresses = await agent.remote_process_call('get_agents', 'MyAgent', recipient=agent.am_aid)
+        addresses = await agent.remote_process_call('get_agents', 'MyAgent',
+                                                    recipient=agent.am_aid)
 
         assert addresses == {
             'MyAgent': ['foo/1']
@@ -156,11 +160,12 @@ class TestAgentManager:
             pass
 
         agents = [am.create_agent(MyAgent) for _ in range(5)]
-        addresses = await asyncio.gather(*[agent.remote_process_call(function='get_agents',
-                                                                     agent_class_names='MyAgent',
-                                                                     recipient=agent.am_aid)
-                                           for agent in agents
-                                           ])
+        addresses = await asyncio.gather(
+            *[agent.remote_process_call(function='get_agents',
+                                        agent_class_names='MyAgent',
+                                        recipient=agent.am_aid)
+              for agent in agents
+              ])
         assert len(addresses) == 5
         for addr in addresses:
             addr['MyAgent'] = sorted(addr['MyAgent'])
@@ -181,11 +186,13 @@ class TestAgentManager:
         agents = [am.create_agent(MyAgent) for _ in range(5)]
         am.create_agent(AnotherAgent)
 
-        addresses = await asyncio.gather(*[agent.remote_process_call(function='get_agents',
-                                                                     agent_class_names=['MyAgent', 'AnotherAgent'],
-                                                                     recipient=agent.am_aid)
-                                           for agent in agents
-                                           ])
+        addresses = await asyncio.gather(
+            *[agent.remote_process_call(function='get_agents',
+                                        agent_class_names=['MyAgent',
+                                                           'AnotherAgent'],
+                                        recipient=agent.am_aid)
+              for agent in agents
+              ])
         assert len(addresses) == 5
         for addr in addresses:
             addr['MyAgent'] = sorted(addr['MyAgent'])
@@ -201,9 +208,10 @@ class TestAgentManager:
 
         agent = am.create_agent(Agent)
         assert len(am.white_pages) == 2
-        address = await agent.remote_process_call(function='perform_create_agent',
-                                                  agent_class_name='hamas.Agent',
-                                                  recipient=agent.am_aid)
+        address = await agent.remote_process_call(
+            function='perform_create_agent',
+            agent_class_name='hamas.Agent',
+            recipient=agent.am_aid)
         assert address == 'foo/2'
         created_agent = am._platform.agents[address]
         assert type(created_agent) is Agent
@@ -215,7 +223,8 @@ class TestAgentManager:
         assert address in am.white_pages
         assert address in am._platform.agents
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(not TESTZIGBEE,
+                        reason="ZigBee module not available or disabled")
     class TestZigbee:
         # Run this on the local platform
         @pytest.mark.asyncio
@@ -228,11 +237,15 @@ class TestAgentManager:
             assert known_platforms == ['remote_platform']
             # remote_am_aid = known_platforms[0] + '/0'
             remote_am_aid = known_platforms[0]
-            agent_aids = await agent.remote_process_call('get_agents', 'Agent', recipient=remote_am_aid, timeout=10)
+            agent_aids = await agent.remote_process_call('get_agents', 'Agent',
+                                                         recipient=remote_am_aid,
+                                                         timeout=10)
             print(agent_aids)
-            assert agent_aids == {'Agent': ['remote_platform/1', 'remote_platform/2']}
+            assert agent_aids == {
+                'Agent': ['remote_platform/1', 'remote_platform/2']}
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(not TESTZIGBEE,
+                        reason="ZigBee module not available or disabled")
     class TestZigbeeMac:
         # Run this on the local platform
         @pytest.mark.asyncio
@@ -245,20 +258,26 @@ class TestAgentManager:
                 known_platforms = am.mts.other_platforms
                 assert known_platforms == ['remote_platform']
                 remote_am_aid = known_platforms[0] + '/0'
-                agent_aids = await agent.remote_process_call('get_agents', 'Agent', address=remote_am_aid, timeout=10)
+                agent_aids = await agent.remote_process_call('get_agents',
+                                                             'Agent',
+                                                             address=remote_am_aid,
+                                                             timeout=10)
                 print(agent_aids)
-                assert agent_aids == {'Agent': ['remote_platform/1', 'remote_platform/2']}
+                assert agent_aids == {
+                    'Agent': ['remote_platform/1', 'remote_platform/2']}
             finally:
                 am.stop()
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(not TESTZIGBEE,
+                        reason="ZigBee module not available or disabled")
     class TestRemote:
         # Run this on the remote platform
         @pytest.mark.asyncio
         async def test_join_platform(self, event_loop):
             log.setLevel(logging.DEBUG)
             platform_name = 'remote_platform'
-            am = AgentManager.create(platform_name=platform_name, loop=event_loop)
+            am = AgentManager.create(platform_name=platform_name,
+                                     loop=event_loop)
             try:
                 am.create_agent(Agent)
                 am.create_agent(Agent)

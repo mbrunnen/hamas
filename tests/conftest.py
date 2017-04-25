@@ -9,7 +9,8 @@ import tempfile
 
 import pytest
 
-from hamas import AgentManager, ZigBeeConnector, AgentPlatform
+from hamas import AgentManager, ZigBeeConnector, AgentPlatform, \
+    PlatformConnector
 
 
 @pytest.fixture
@@ -17,22 +18,22 @@ def platform_name():
     return 'foo'
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def am(event_loop, platform_name):
     # Create an agent manager for each test.
     agent_manager = AgentManager.create(platform_name, event_loop)
     yield agent_manager
     agent_manager.stop()
-    del agent_manager._platform._message_transport._platform_connector
+    print("\n\tdelete manager\n")
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def ap(event_loop, platform_name):
     # Create a agent platform for each test.
     platform = AgentPlatform(platform_name, event_loop)
     yield platform
     platform.stop()
-    del platform
+    del PlatformConnector._platforms[platform_name]
 
 
 @pytest.fixture

@@ -31,7 +31,8 @@ class PlatformConnector(Connector):
         return super(PlatformConnector, cls).__new__(cls)
 
     def __del__(self):
-        del self._platforms[self.address]
+        if self.address in self._platforms:
+            del self._platforms[self.address]
 
     def __init__(self, mts):
         super(PlatformConnector, self).__init__()

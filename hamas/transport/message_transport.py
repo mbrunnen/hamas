@@ -46,17 +46,6 @@ class MessageTransportSystem(object):
         self._zigbee_connector = None
         self._initiate_connectors(regex)
 
-    # def __del__(self):
-    #     if self._platform_connector:
-    #         del self._platform_connector
-    #     if self._unix_connector:
-    #         del self._unix_connector
-    #     if self._local_connector:
-    #         del self._local_connector
-    #     if self._zigbee_connector:
-    #         del self._zigbee_connector
-
-
     @property
     def platform_name(self):
         return self._platform.name
@@ -73,11 +62,9 @@ class MessageTransportSystem(object):
         """
         assert type(
             message) is Message, "Only Messages can be sent:\n\t".format(
-            message)
-        log.debug(
-            "Sending a message from {} to {} via {}.".format(message.sender,
-                                                             message.recipient,
-                                                             message.routing))
+                message)
+        log.debug("Sending a message from {} to {} via {}.".format(
+            message.sender, message.recipient, message.routing))
         if message.sender == message.recipient:
             raise TransmissionError(
                 'Agent "{}" wants to send a message to himself.'.format(
@@ -99,18 +86,18 @@ class MessageTransportSystem(object):
         if recipient in self._local_connector:
             await self._local_connector.unicast(message=message, aid=recipient)
         elif self._platform_connector and p_name in self._platform_connector:
-            await self._platform_connector.unicast(message=message,
-                                                   platform_name=p_name)
+            await self._platform_connector.unicast(
+                message=message, platform_name=p_name)
         elif self._unix_connector and p_name in self._unix_connector:
-            await self._unix_connector.unicast(message=message,
-                                               platform_name=p_name)
+            await self._unix_connector.unicast(
+                message=message, platform_name=p_name)
         elif self._zigbee_connector and p_name in self._zigbee_connector:
-            await self._zigbee_connector.unicast(message=message,
-                                                 platform_name=p_name)
+            await self._zigbee_connector.unicast(
+                message=message, platform_name=p_name)
         else:
             raise TransmissionError(
-                "Transmission to agent {} on platform {} failed.".format(a_name,
-                                                                        p_name))
+                "Transmission to agent {} on platform {} failed.".format(
+                    a_name, p_name))
 
     async def _broadcast(self, message):
         assert message.recipient is None
@@ -148,17 +135,29 @@ class MessageTransportSystem(object):
 
         log.info(
             "MessageTransportSystem received a %s message from %s for %s with content %s.",
-            message.routing, message.sender, message.recipient,
+            message.routing,
+            message.sender,
+            message.recipient,
             message.content.__class__.__name__,
-            extra={'data_context': 'received_msgs',
-                   'data': {'performative': message.performative,
-                            'sender': message.sender,
-                            'routing': message.routing,
-                            'recipient': message.recipient,
-                            'content': message.content.__class__.__name__,
-                            'conversation_id': '0x' + bytes2hexstr(
-                                message.conversation_id),
-                            'management': self._platform_name}})
+            extra={
+                'data_context': 'received_msgs',
+                'data': {
+                    'performative':
+                    message.performative,
+                    'sender':
+                    message.sender,
+                    'routing':
+                    message.routing,
+                    'recipient':
+                    message.recipient,
+                    'content':
+                    message.content.__class__.__name__,
+                    'conversation_id':
+                    '0x' + bytes2hexstr(message.conversation_id),
+                    'management':
+                    self.platform_name
+                }
+            })
         await self.send(message)
 
     @classmethod
@@ -197,9 +196,8 @@ class MessageTransportSystem(object):
     async def _run(self):
         while self._running:
             await asyncio.sleep(self._interval)
-            log.info(
-                "The MessageTransportSystem on '{}' ran an update task.".format(
-                    self._platform_name))
+            log.info("The MessageTransportSystem on '{}' ran an update task.".
+                     format(self.platform_name))
             await self._zigbee_connector.update_others()
 
     @property
@@ -227,10 +225,11 @@ class MessageTransportSystem(object):
             self._unix_connector = None
             log.warning("Could not initialize UnixConnector.")
         try:
-            self._zigbee_connector = ZigBeeConnector(self._loop,
-                                                     platform_name=self.platform_name,
-                                                     callback=self._sync_receive,
-                                                     regex=regex)
+            self._zigbee_connector = ZigBeeConnector(
+                self._loop,
+                platform_name=self.platform_name,
+                callback=self._sync_receive,
+                regex=regex)
         except ConnectorError:
             self._zigbee_connector = None
             log.warning("Could not initialize ZigBeeConnector.")

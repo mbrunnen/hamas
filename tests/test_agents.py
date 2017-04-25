@@ -14,7 +14,7 @@ import unittest.mock
 import uuid
 import pytest
 from hamas import Agent, provide, Message
-from hamas.agents import QueueRegister
+from hamas.agents import ConversationRegister
 from hamas.transport import RemoteProcessCall, RemoteProcessReply, \
     StringContent
 
@@ -31,7 +31,7 @@ class TestQueueregister:
 
         qid = 'test'
 
-        queues = QueueRegister()
+        queues = ConversationRegister()
         assert queues._queues == {}
         assert queues._queue_futs == {}
 

@@ -23,7 +23,7 @@ class TestAgentPlatform:
 
     @pytest.mark.asyncio
     async def test_create_agent(self, ap):
-        """Test the agent creation of agents with the AgentManager
+        """Test the agent creation of agents with the AgentPlatform
         """
 
         agents = []

@@ -22,8 +22,7 @@ log = logging.getLogger(__name__)
 class AgentPlatform(object):
     _allowed_chars = '_' + string.ascii_letters + string.digits
 
-    def __init__(self, name, loop, update_interval=60,
-                 regex='/dev/ttyUSB'):
+    def __init__(self, name, loop, update_interval=60, regex='/dev/ttyUSB'):
         def generate_name():
             gen_new = itertools.count()
             while True:
@@ -33,13 +32,13 @@ class AgentPlatform(object):
                 yield next(gen_new)
 
         assert set(name) <= set(
-            self._allowed_chars), "Only {} characters are allowed as platform name.".format(
+            self._allowed_chars
+        ), "Only {} characters are allowed as platform name.".format(
             self._allowed_chars)
         self._loop = loop
-        self.name = name
-        self._message_transport = MessageTransportSystem(platform=self,
-                                                         update_interval=update_interval,
-                                                         regex=regex)
+        self._name = name
+        self._message_transport = MessageTransportSystem(
+            platform=self, update_interval=update_interval, regex=regex)
         self.__agents = dict()
         self._last_num = 0
         self._free_names = list()
@@ -68,16 +67,17 @@ class AgentPlatform(object):
 
         Args:
             agent_class (class): Passes the class of the required Agent
-            args (list): Passes the arguments to the constructor of the agent
-                class
-            kwargs (dict): Passes the keyword arguments to the constructor of
+            args: Passes the arguments to the constructor of the agent
+                class.
+            kwargs: Passes the keyword arguments to the constructor of
                 the agent class
+
         """
         assert issubclass(agent_class, Agent)
         agent_name = str(next(self._name_gen))
-        aid = self.name + '/' + agent_name
-        agent = agent_class(*args, aid=aid, mts=self._message_transport,
-                            **kwargs)
+        aid = self._name + '/' + agent_name
+        agent = agent_class(
+            *args, aid=aid, mts=self._message_transport, **kwargs)
         self.__agents[aid] = agent
         log.info("Platform created agent {}.".format(agent))
         self._last_num += 1
@@ -95,37 +95,37 @@ class AgentManager(Agent):
 
     Attributes:
         _white_pages (dict): Dictionary which contains the agent description, actually the class name.
-        _platform (AgentPlatform):
+        _platform (AgentPlatform): The platform, on which the :class:`AgentManager` is managing the agents.
 
     """
     __in_create = False
 
     @classmethod
-    def create(cls, platform_name, loop, regex='/dev/ttyUSB'):
+    def create(cls, name, loop, regex='/dev/ttyUSB'):
         """Factory function which instantiates a AgentManager agent.
 
         Do not instantiate the AgentManager directly. It is a special
         agent, which has no ID given, so it will create it's own ID.
-        Also it will create a MessageTransportSystem.
+        Also it will create a :class:`MessageTransportSystem`.
 
         Arguments:
-            platform_name(str):The management ID must be given. It can read from
-                a config file.
+            name(str):The management ID must be given. It can read from
+            a config file.
             loop (BaseEventLoop): The event loop.
             regex(str): The regular expression to find the serial port.
+
         Returns:
             AgentManager
+
         """
-        platform = AgentPlatform(platform_name=platform_name, loop=loop,
-                                 regex=regex)
+        platform = AgentPlatform(name=name, loop=loop, regex=regex)
         manager = platform.create_agent(AgentManager, platform=platform)
         return manager
 
     def __init__(self, platform, *args, **kwargs):
-        """Initialise the AgentManager
-        """
         assert type(
-            platform) is AgentPlatform, "Create the {} with its create method.".format(
+            platform
+        ) is AgentPlatform, "Create the {} with its create method.".format(
             self.__class__.__name__)
         super(AgentManager, self).__init__(*args, **kwargs)
         self._platform = platform
@@ -158,9 +158,10 @@ class AgentManager(Agent):
         Args:
             agent_class (class): Passes the class of the required Agent
             args (list): Passes the arguments to the constructor of the agent
-                class
+            class
             kwargs (dict): Passes the keyword arguments to the constructor of
-                the agent class
+            the agent class
+
         """
         assert issubclass(agent_class, Agent)
         agent = self._platform.create_agent(agent_class, *args, **kwargs)
