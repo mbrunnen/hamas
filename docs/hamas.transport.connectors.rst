@@ -25,10 +25,10 @@ The Platform Connector
     :undoc-members:
     :show-inheritance:
 
-hamas.transport.connectors.unix_connector module
+hamas.transport.connectors.uds_connector module
 ------------------------------------------------
 
-.. automodule:: hamas.transport.connectors.unix_connector
+.. automodule:: hamas.transport.connectors.uds_connector
     :members:
     :undoc-members:
     :show-inheritance:

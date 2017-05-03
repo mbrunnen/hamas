@@ -1,7 +1,6 @@
-# Example logging configuration file
-# Make sure the logging directories exist
 version: 1
 disable_existing_loggers: False # otherwise the logger doesn't work
+create_dir: ./logs
 formatters:
     oneline:
         style: '{'
@@ -26,7 +25,6 @@ filters:
             - message_transport
 #            - zigbee
 #            - ports
-            - hamas.ems
 
     zigbee_sent_msgs_filter:
         (): hamas.CSVFilter
@@ -43,7 +41,7 @@ handlers:
         formatter: multiline
         stream: ext://sys.stdout
         filters:
-            - shell_filter
+            # - shell_filter
 
     received_msgs_csv:
         class: logging.FileHandler
@@ -52,7 +50,7 @@ handlers:
         level: DEBUG
         formatter: csv_fmt
         filters:
-            - received_msgs_filter
+            # - received_msgs_filter
 
     sent_zigbee_msgs_csv:
         class: logging.FileHandler
@@ -99,15 +97,15 @@ root:
     level: DEBUG
     handlers:
         - shell
-        - received_msgs_csv
-        - sent_zigbee_msgs_csv
-        - info_file_handler
-        - error_file_handler
-        - syslog_handler
+        # - received_msgs_csv
+        # - sent_zigbee_msgs_csv
+        # - info_file_handler
+        # - error_file_handler
+        # - syslog_handler
 
 # logs in the modules can be precised here
 #loggers:
-#    hamas.management.queue_register:
+#    hamas.platform.queue_register:
 #        level: WARN
 #        handlers: [shell]
 #        propagate: yes

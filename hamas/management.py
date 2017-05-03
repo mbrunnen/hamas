@@ -12,12 +12,13 @@ import importlib
 import itertools
 import logging
 import string
+import os
 
 from .agents import Agent, provide
 from .transport.message_transport import MessageTransportSystem
+from .logger import config_logger
 
 log = logging.getLogger(__name__)
-
 
 class AgentPlatform(object):
     _allowed_chars = '_' + string.ascii_letters + string.digits

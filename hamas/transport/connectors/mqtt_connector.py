@@ -21,6 +21,7 @@ from ..messages import Message
 
 log = logging.getLogger(__name__)
 
+MQTT = 'MQTT' in os.environ.keys() and os.environ['MQTT'] == '1'
 
 class MqttConnector(Connector):
     """ The :class:`MqttConnector`

@@ -23,14 +23,11 @@ class Serializable(ABC):
     _code = None
 
     serializers = {
-        b'\x01': 'hamas.management.contents.RemoteProcessCall',
-        b'\x02': 'hamas.management.contents.RemoteProcessReply',
-        b'\x03': 'hamas.management.contents.StringContent',
-        b'\x04': 'hamas.management.contents.DictionaryContent',
-        b'\x05': 'hamas.management.messages.Message',
-        b'\x08': 'hamas.ems.ems_contents.EMSContent',
-        b'\x09': 'hamas.ems.ems_contents.BidCollection',
-        b'\x0A': 'hamas.ems.ems_contents.Bid',
+        b'\x01': 'hamas.transport.contents.RemoteProcessCall',
+        b'\x02': 'hamas.transport.contents.RemoteProcessReply',
+        b'\x03': 'hamas.transport.contents.StringContent',
+        b'\x04': 'hamas.transport.contents.DictionaryContent',
+        b'\x05': 'hamas.transport.messages.Message',
     }
 
     def _get_init_args(self):

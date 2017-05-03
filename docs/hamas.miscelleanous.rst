@@ -1,6 +1,13 @@
 Miscelleanous
 -----------------------
 
+Configuration
+~~~~~~~~~~~~~
+.. automodule:: hamas.config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Exceptions
 ~~~~~~~~~~
 .. automodule:: hamas.exceptions

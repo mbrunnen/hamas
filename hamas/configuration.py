@@ -1,77 +1,37 @@
+#!/usr/bin/os.environ python
 # -*- coding: utf-8 -*-
 # =============================================================================
-#   AUTHOR:	Manoel Brunnen, manoel.brunnen@gmail.com
-#   CREATED:    05.10.2016
+#   AUTHOR:     Manoel Brunnen, manoel.brunnen@gmail.com
+#   CREATED:    02.05.2017
 #   LICENSE:    MIT
-#   FILE:	configuration.py
+#   FILE:       config.py
 # =============================================================================
-"""Configuration loader
+"""Definition of global configuration variables.
 """
 
 import configparser
-import os.path
-
-from .exceptions import ConfigError
+import os
 
 
-class Configuration(object):
-    def __init__(self, conf_file=None):
-        self.parser = configparser.ConfigParser()
-        self.parser.optionxform = str
-        self.default_conf_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '../configuration/default.conf'))
-        self.conf_file = os.path.normpath(conf_file) if conf_file is not None else self.default_conf_file
+def load_config():
+    conf_file = os.environ[
+        'HAMAS_CONFIG'] if 'HAMAS_CONFIG' in os.environ.keys(
+    ) else '../configuration/hamas.conf'
+    conf_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), conf_file))
+    conf_dir = os.path.abspath(os.path.dirname(conf_path))
 
-    def __eq__(self, other):
-        self.update()
-        other.update()
+    config = configparser.ConfigParser()
+    config.read(conf_path)
 
-        equal = self.parser.sections() == other.parser.sections()
+    log_conf_path = os.path.abspath(
+        os.path.join(conf_dir, config['General']['log_config']))
 
-        if equal:
-            for section in self.parser.sections():
-                equal &= sorted(self.parser.items(section)) == sorted(
-                    other.parser.items(section))
+    use_uds = os.name == 'posix' and (
+        config.getboolean('General', 'use_uds') or
+        ('HAMASUDS' in os.environ.keys() and os.environ['HAMASUDS'] == '1'))
 
-        return equal
+    return conf_path, log_conf_path, use_uds
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
-    def __repr__(self):
-        return "{}: [".format(self.conf_file) + "], [".join(str.format(s) for s in self.parser.sections()) + "]"
-
-    def reset_config(self):
-        """Resets the config conf_file to working state
-        """
-        self.parser.read(self.default_conf_file)
-        with open(self.conf_file, 'w') as conf:
-            self.parser.write(conf)
-
-    def update(self):
-        if not os.path.isfile(self.conf_file):
-            raise FileNotFoundError('The file {} cannot be not found.'.format(
-                self.conf_file))
-        self.parser.read(self.conf_file)
-
-    def get_parameter(self, section, parameter):
-        """Function to request a setting from the configuration file
-        Attributes:
-            section(str):The name of the requested settings section
-            parameter(str):The name of the requested parameter
-        Returns:
-            The value of the setting
-        """
-        self.update()
-        if section in self.parser.sections():
-            if parameter in self.parser[section]:
-                return self.parser[section][parameter]
-            else:
-                raise ConfigError(
-                    "The parameter {} in the '{}' section was not found in "
-                    "the config file {}."
-                    "".format(
-                        section, parameter, self.conf_file))
-        else:
-            raise ConfigError(
-                "The section '{}' was not found in the config file {}.".format(
-                    section, self.conf_file))
+HAMASRC, LOGRC, USE_UDS = load_config()

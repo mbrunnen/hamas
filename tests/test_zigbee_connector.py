@@ -30,8 +30,11 @@ from hamas import ZigBeeConnector
 
 log = logging.getLogger(__name__)
 
-TESTNOZIGBEE = 'HAMASNOZIGBEE' in os.environ.keys() and os.environ['HAMASNOZIGBEE'] == '1'
-TESTNOTCONNECTED = not [fd for fd, p, i in serial.tools.list_ports.grep('/dev/ttyUSB')] and not TESTNOZIGBEE
+TESTNOZIGBEE = 'HAMASNOZIGBEE' in os.environ.keys(
+) and os.environ['HAMASNOZIGBEE'] == '1'
+TESTNOTCONNECTED = not [
+    fd for fd, p, i in serial.tools.list_ports.grep('/dev/ttyUSB')
+] and not TESTNOZIGBEE
 TESTZIGBEE = not TESTNOZIGBEE and not TESTNOTCONNECTED
 log.setLevel(logging.INFO)
 
@@ -39,19 +42,22 @@ log.setLevel(logging.INFO)
 class TestZigbee:
     """Test Case for the ZigBee interface"""
 
-    @pytest.mark.skipif(not TESTNOZIGBEE, reason="Set $HAMASNOZIGBEE to test it.")
+    @pytest.mark.skipif(
+        not TESTNOZIGBEE, reason="Set $HAMASNOZIGBEE to test it.")
     def test_nozigbee(self, event_loop, platform_name):
         with pytest.raises(ConnectorError) as exception:
             ZigBeeConnector(event_loop, platform_name)
         exception.match('ZigBee is disabled.')
 
-    @pytest.mark.skipif(not TESTNOTCONNECTED, reason="ZigBee module available.")
+    @pytest.mark.skipif(
+        not TESTNOTCONNECTED, reason="ZigBee module available.")
     def test_not_connected(self, event_loop, platform_name):
         with pytest.raises(ConnectorError) as exception:
             ZigBeeConnector(event_loop, platform_name)
         exception.match('No serial device found.')
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled.")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled.")
     def test_create(self, event_loop, platform_name):
         usbport = '/dev/ttyUSB'
         ports = [fd for fd, p, i in serial.tools.list_ports.grep(usbport)]
@@ -62,7 +68,8 @@ class TestZigbee:
         assert zb._callback is None
         zb.stop()
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     def test_generate_fid(self, zb):
         """Test if the frame ID is assigned as intended
         """
@@ -78,7 +85,8 @@ class TestZigbee:
             assert ord(f_id) == (i % 255) + 1
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_send_command(self, event_loop, platform_name):
         """ Get the other participants in the network.
         """
@@ -96,9 +104,11 @@ class TestZigbee:
         zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_transmission_failed(self, event_loop, platform_name):
-        zb = ZigBeeConnector(event_loop, platform_name, serial_timeout=0.1, others_timeout=1)
+        zb = ZigBeeConnector(
+            event_loop, platform_name, serial_timeout=0.1, others_timeout=1)
         await zb.start()
         addr = '00:12:34:56:78:9A:BC:DF!ABCD'
         with pytest.raises(TransmissionError) as exc:
@@ -113,7 +123,8 @@ class TestZigbee:
         address = ZigBeeConnector.compose_address(long_addr)
         assert long_addr != address
         assert address == 'DE:AD:BE:EF:42:00:00:00'
-        parsed_long_addr, parsed_short_addr = ZigBeeConnector.parse_address(address)
+        parsed_long_addr, parsed_short_addr = ZigBeeConnector.parse_address(
+            address)
         assert parsed_long_addr == long_addr
         assert parsed_short_addr == b'\xFF\xFE'
 
@@ -122,11 +133,13 @@ class TestZigbee:
         short_addr = b'\x12\xAB'
         address = ZigBeeConnector.compose_address(long_addr, short_addr)
         assert address == 'DE:AD:BE:EF:42:00:00:00!12AB'
-        parsed_long_addr, parsed_short_addr = ZigBeeConnector.parse_address(address)
+        parsed_long_addr, parsed_short_addr = ZigBeeConnector.parse_address(
+            address)
         assert parsed_long_addr == long_addr
         assert parsed_short_addr == short_addr
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     def test_get_port(self, zb):
         i = 0
         for port in zb._get_port():
@@ -135,33 +148,43 @@ class TestZigbee:
             i += 1
         assert i == 255
 
-    @pytest.mark.parametrize('msg', [Message('someone', StringContent('test string'), 'someone else', 'somehow', None),
-                                     Message('someone', StringContent('test string'), None, 'somehow', None),
-                                     Message('someone', StringContent('test string'), None, 'somehow', 100),
-                                     ])
+    @pytest.mark.parametrize('msg', [
+        Message('someone',
+                StringContent('test string'), 'someone else', 'somehow', None),
+        Message('someone', StringContent('test string'), None, 'somehow',
+                None),
+        Message('someone', StringContent('test string'), None, 'somehow', 100),
+    ])
     def test_deserialize_message(self, msg):
         serialized_msg = msg.serialize()
         assert type(serialized_msg) is bytes
         deserialzed_msg = ZigBeeConnector._deserialize_message(serialized_msg)
         assert deserialzed_msg == msg
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     @pytest.mark.asyncio
     async def test_get_address(self, event_loop, platform_name):
         zb = ZigBeeConnector(event_loop, platform_name)
         await zb.start()
         assert zb.address == '00:13:A2:00:41:48:13:5F!0000'
-        response_high = await zb.send_command(cmd='at', command=b'SH', num_items=1)
+        response_high = await zb.send_command(
+            cmd='at', command=b'SH', num_items=1)
         assert len(response_high) == 1
-        response_low = await zb.send_command(cmd='at', command=b'SL', num_items=1)
+        response_low = await zb.send_command(
+            cmd='at', command=b'SL', num_items=1)
         assert len(response_low) == 1
-        response_my = await zb.send_command(cmd='at', command=b'MY', num_items=1)
-        address = zb.compose_address(response_high[0]['parameter'] + response_low[0]['parameter'], response_my[0]['parameter'])
+        response_my = await zb.send_command(
+            cmd='at', command=b'MY', num_items=1)
+        address = zb.compose_address(
+            response_high[0]['parameter'] + response_low[0]['parameter'],
+            response_my[0]['parameter'])
         assert address == zb.address
         zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_update_others_requesting(self, event_loop):
         log.setLevel(logging.DEBUG)
         zb = ZigBeeConnector(event_loop, 'updating_platform')
@@ -175,7 +198,8 @@ class TestZigbee:
             assert len(others) > 0
             print("Other Machines found: {}".format(zb.other_platforms))
             if len(others) == 1:
-                assert re.match('00:13:A2:00:41:48:13:77!', others['receiving_platform'])
+                assert re.match('00:13:A2:00:41:48:13:77!',
+                                others['receiving_platform'])
             else:
                 assert re.match('00:13:A2:00:41:48:13:77!', others['emasem01'])
                 assert re.match('00:13:A2:00:41:48:12:EA!', others['emasem02'])
@@ -184,7 +208,8 @@ class TestZigbee:
             zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_get_mtu(self, event_loop, platform_name):
         zb = ZigBeeConnector(event_loop, platform_name)
         await zb.start()
@@ -193,7 +218,8 @@ class TestZigbee:
         zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_unicast(self, event_loop):
         def reply_received(message):
             log.info("Got message:\n\t{}".format(message))
@@ -201,7 +227,8 @@ class TestZigbee:
 
         log.setLevel(logging.INFO)
 
-        zb = ZigBeeConnector(event_loop, 'sending_platform', callback=reply_received)
+        zb = ZigBeeConnector(
+            event_loop, 'sending_platform', callback=reply_received)
         text = ''.join(random.choice(string.printable) for _ in range(2500))
         try:
             got_reply = asyncio.Future()
@@ -216,13 +243,15 @@ class TestZigbee:
             assert reply.content == msg.content
             print("The message is:\n{}\n".format(reply.content.string))
             print("Transmission took {:f}s.".format(tm_end - start))
-            print("The reply arrived {:f}s after transmission.".format(rp_end - tm_end))
+            print("The reply arrived {:f}s after transmission.".format(
+                rp_end - tm_end))
             print("The conversation took {:f}s.".format(rp_end - start))
         finally:
             zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_broadcast(self, event_loop):
         def reply_received(message):
             log.info("Got message:\n\t{}".format(message))
@@ -230,8 +259,11 @@ class TestZigbee:
 
         log.setLevel(logging.DEBUG)
 
-        zb = ZigBeeConnector(event_loop, 'sending_platform', callback=reply_received)
-        text = ''.join(random.choice(string.printable) for _ in range(5 * Fraction.max_sdu_len()))
+        zb = ZigBeeConnector(
+            event_loop, 'sending_platform', callback=reply_received)
+        text = ''.join(
+            random.choice(string.printable)
+            for _ in range(5 * Fraction.max_sdu_len()))
         try:
             replies = asyncio.Queue()
             msg = Message(sender=zb.platform_name, content=StringContent(text))
@@ -244,7 +276,8 @@ class TestZigbee:
                 reply = await replies.get()
                 rp_end = time.monotonic()
                 assert reply.content == msg.content
-                print("The reply from {} arrived {:f}s after transmission.".format(reply.sender, rp_end - tm_end))
+                print("The reply from {} arrived {:f}s after transmission.".
+                      format(reply.sender, rp_end - tm_end))
             end = time.monotonic()
 
             print("Transmission took {:f}s.".format(tm_end - start))
@@ -254,10 +287,12 @@ class TestZigbee:
             zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_send_handler(self, event_loop):
         zb = ZigBeeConnector(event_loop, 'test', serial_timeout=0.1)
-        with unittest.mock.patch.object(zb._zigbee, 'send', unittest.mock.DEFAULT) as mock:
+        with unittest.mock.patch.object(zb._zigbee, 'send',
+                                        unittest.mock.DEFAULT) as mock:
             task = asyncio.ensure_future(zb._send_handler())
             response_fut = asyncio.Future()
             response_fut.set_result('done')
@@ -284,7 +319,8 @@ class TestZigbee:
 
 class TestRemote:
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_recast_1(self, event_loop):
         log.setLevel(logging.DEBUG)
 
@@ -300,18 +336,22 @@ class TestRemote:
                 got_message = asyncio.Future()
                 log.info("Node {} is listening ...".format(zb.address))
                 received_msg = await got_message
-                reply = Message(sender=zb.address, content=received_msg.content)
+                reply = Message(
+                    sender=zb.address, content=received_msg.content)
                 try:
-                    await zb.unicast(message=reply, platform_name='sending_platform')
+                    await zb.unicast(
+                        message=reply, platform_name='sending_platform')
                 except TransmissionError as exc:
                     log.exception(exc)
-                log.info("Finished. Here is the message again:\n\t{}".format(received_msg.content.string))
+                log.info("Finished. Here is the message again:\n\t{}".format(
+                    received_msg.content.string))
 
         finally:
             zb.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     async def test_recast_2(self, event_loop):
         log.setLevel(logging.DEBUG)
 
@@ -327,17 +367,21 @@ class TestRemote:
                 got_message = asyncio.Future()
                 log.info("Node {} is listening ...".format(zb.address))
                 received_msg = await got_message
-                reply = Message(sender=zb.address, content=received_msg.content)
+                reply = Message(
+                    sender=zb.address, content=received_msg.content)
                 try:
-                    await zb.unicast(message=reply, platform_name='sending_platform')
+                    await zb.unicast(
+                        message=reply, platform_name='sending_platform')
                 except TransmissionError as exc:
                     log.exception(exc)
-                log.info("Finished. Here is the message again:\n\t{}".format(received_msg.content.string))
+                log.info("Finished. Here is the message again:\n\t{}".format(
+                    received_msg.content.string))
 
         finally:
             zb.stop()
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     @pytest.mark.asyncio
     async def test_update_others_1(self, event_loop):
         log.setLevel(logging.DEBUG)
@@ -348,7 +392,8 @@ class TestRemote:
         finally:
             zb.stop()
 
-    @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
+    @pytest.mark.skipif(
+        not TESTZIGBEE, reason="ZigBee module not available or disabled")
     @pytest.mark.asyncio
     async def test_update_others_2(self, event_loop):
         log.setLevel(logging.DEBUG)

@@ -11,7 +11,7 @@ import logging
 
 from .connectors.local_connector import LocalConnector
 from .connectors.platform_connector import PlatformConnector
-from .connectors.unix_connector import UnixConnector
+from .connectors.uds_connector import UnixConnector
 from .connectors.zigbee_connector import ZigBeeConnector
 from .messages import Message
 from ..exceptions import TransmissionError, ConnectorError

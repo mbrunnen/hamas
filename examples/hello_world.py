@@ -11,14 +11,10 @@
 
 import asyncio
 import logging
-import os
 
-from hamas import Agent, AgentManager, config_logger
+from hamas import Agent, AgentManager
 
 log = logging.getLogger(__name__)
-
-config_logger(os.path.normpath('./logging.yaml'))
-
 
 async def _print_agents(agent_manager):
     for ag in agent_manager.white_pages:
@@ -40,7 +36,6 @@ def main():
         print("Stopping...")
         task.cancel()
         am.stop()
-        # loop.run_until_complete(asyncio.wait(asyncio.Task.all_tasks()))
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
 

@@ -24,7 +24,8 @@ def am(event_loop, platform_name):
     agent_manager = AgentManager.create(platform_name, event_loop)
     yield agent_manager
     agent_manager.stop()
-    print("\n\tdelete manager\n")
+    if platform_name in PlatformConnector._platforms:
+        del PlatformConnector._platforms[platform_name]
 
 
 @pytest.fixture(scope="function")
@@ -33,7 +34,8 @@ def ap(event_loop, platform_name):
     platform = AgentPlatform(platform_name, event_loop)
     yield platform
     platform.stop()
-    del PlatformConnector._platforms[platform_name]
+    if platform_name in PlatformConnector._platforms:
+        del PlatformConnector._platforms[platform_name]
 
 
 @pytest.fixture

@@ -5,13 +5,14 @@
 #   LICENSE:    MIT
 #   FILE:       exceptions.py
 # ==============================================================================
-"""Exception used by hamas
+"""Exceptions used by hamas
 """
 
 
 class HamasError(Exception):
     """Base Class for all exceptions defined by hamas
     """
+
     def __init__(self, *args, **kwargs):
         super(HamasError, self).__init__(*args, **kwargs)
         self.message = args[0] if len(args) > 0 else None
@@ -49,11 +50,5 @@ class MarketError(HamasError):
 
 class DeviceHandlerError(HamasError):
     """Raised on device handler specific errors
-    """
-    pass
-
-
-class ConfigError(KeyError, HamasError):
-    """Raised when there is a problem with the config conf_file.
     """
     pass

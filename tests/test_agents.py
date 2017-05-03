@@ -26,25 +26,25 @@ class TestQueueregister:
     async def test_new_queue(self):
         async def queue_consumer(q_id):
             result = await queues.get(q_id)
-            queues.task_done(q_id)
             queues.set_result(q_id, result)
 
         qid = 'test'
 
         queues = ConversationRegister()
         assert queues._queues == {}
-        assert queues._queue_futs == {}
+        assert queues._futs == {}
 
         assert qid not in queues
-        q_fut = queues.new_queue(qid, queue_consumer(qid))
+        q_fut = queues.new_conversation(qid)
+        asyncio.ensure_future(queue_consumer(qid))
         assert queues._queues != {}
-        assert queues._queue_futs == {'test': q_fut}
+        assert queues._futs == {'test': q_fut}
         assert qid in queues
         await queues.put(qid, 'the result')
         q_result = await q_fut
         assert qid not in queues
         assert queues._queues == {}
-        assert queues._queue_futs == {}
+        assert queues._futs == {}
         assert q_result == 'the result'
 
 
@@ -130,9 +130,8 @@ class TestAgent:
         sender = 'someone'
         timeout = 1
         conv_id = uuid.uuid4()
-        reply_fut = agent._queues.new_queue(conv_id,
-                                            agent._message_handler(
-                                                conv_id, timeout, 1))
+        reply_fut = agent._conversations.new_conversation(conv_id)
+        asyncio.ensure_future(agent._message_handler(conv_id, timeout, 1))
         msg = Message(
             sender=sender,
             content=StringContent('stuff'),
@@ -251,7 +250,7 @@ class TestAgent:
             mts,
             mts.platform_name + '/1', )
         with unittest.mock.patch(
-                'hamas.management.agents.log.warning') as mock:
+                'hamas.agents.log.warning') as mock:
             sender = 'someone'
             content = RemoteProcessReply('get_aid', 'stuff')
             msg = Message(

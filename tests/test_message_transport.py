@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-# ==============================================================================
+# =============================================================================
 #   AUTHOR:	    Manoel Brunnen, manoel.brunnen@gmail.com
 #   CREATED:    14.07.2016
 #   LICENSE:    MIT
 #   FILE:	    test_message_transport.py
-# ==============================================================================
+# =============================================================================
 """Tests for the MessageTransportSystem class.
 """
 
@@ -15,7 +15,7 @@ import os
 import pytest
 import serial.tools.list_ports
 
-from hamas import Agent, MessageTransportSystem, Message, provide, StringContent, AgentPlatform
+from hamas import Agent, MessageTransportSystem, Message, provide, StringContent, AgentPlatform, PlatformConnector
 
 log = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ class TestMessageTransport:
         class SecretKeeper(Agent):
             def __init__(self, *args, **kwargs):
                 super(SecretKeeper, self).__init__(*args, **kwargs)
-                self.my_secret = 'the earth is flat and my platform_name is {}'.format(self.aid)
+                self.my_secret = 'the earth is flat and my name is {}'.format(self.aid)
 
             async def custom_contents_cb(self, message):
                 assert message.content.string == request_text
@@ -209,10 +209,10 @@ class TestMessageTransport:
                 return self.my_secret
 
         timeout = 1
-        platform1 = AgentPlatform(platform_name='foo1', loop=event_loop)
-        platform2 = AgentPlatform(platform_name='foo2', loop=event_loop)
+        platform1 = AgentPlatform(name='foo1', loop=event_loop)
+        platform2 = AgentPlatform(name='foo2', loop=event_loop)
         with pytest.raises(KeyError):
-            AgentPlatform(platform_name='foo2', loop=event_loop)
+            AgentPlatform(name='foo2', loop=event_loop)
 
         requester = platform1.create_agent(Agent)
         replier = platform2.create_agent(SecretKeeper)
@@ -223,6 +223,8 @@ class TestMessageTransport:
         assert reply == 'the earth is flat'
         platform1.stop()
         platform2.stop()
+        del PlatformConnector._platforms[platform1.name]
+        del PlatformConnector._platforms[platform2.name]
 
     @pytest.mark.asyncio
     async def test_dummy_broadcast(self, event_loop):
@@ -316,8 +318,8 @@ class TestMessageTransport:
 @pytest.mark.skipif(not TESTZIGBEE, reason="ZigBee module not available or disabled")
 class TestZigBee:
     @pytest.mark.asyncio
-    async def test_update_task(self, platform_name, event_loop):
-        ap = AgentPlatform(platform_name, event_loop, update_interval=0.1)
+    async def test_update_task(self, name, event_loop):
+        ap = AgentPlatform(name, event_loop, update_interval=0.1)
         mts = ap._message_transport
         log.debug("{} Started...".format(mts))
         mts.start()
