@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-from .exceptions import HamasError, AgentError, TransmissionError, PortError, \
-    ConnectorError, MarketError, DeviceHandlerError
+from .configuration import HAMASRC, MACHINE_NAME, USE_ZIGBEE, USE_MQTT, \
+    USE_UDS, LOGRC, DEVICE
+from .exceptions import *
 from .logger import *
 from .management import *
 from .transport import *
-from .config import *
 
 config_logger(LOGRC)

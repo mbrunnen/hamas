@@ -14,24 +14,38 @@ import os
 
 
 def load_config():
+    global HAMASRC, MACHINE_NAME, USE_ZIGBEE, USE_MQTT, USE_UDS, LOGRC, DEVICE
     conf_file = os.environ[
         'HAMAS_CONFIG'] if 'HAMAS_CONFIG' in os.environ.keys(
-    ) else '../configuration/hamas.conf'
-    conf_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), conf_file))
-    conf_dir = os.path.abspath(os.path.dirname(conf_path))
+    ) else os.path.abspath(os.path.join(os.path.dirname(__file__),
+                        '../configuration/hamas.conf'))
+
+    HAMASRC = os.path.abspath(conf_file)
+    conf_dir = os.path.dirname(HAMASRC)
 
     config = configparser.ConfigParser()
-    config.read(conf_path)
+    config.read(HAMASRC)
 
-    log_conf_path = os.path.abspath(
+    LOGRC = os.path.abspath(
         os.path.join(conf_dir, config['General']['log_config']))
 
-    use_uds = os.name == 'posix' and (
-        config.getboolean('General', 'use_uds') or
-        ('HAMASUDS' in os.environ.keys() and os.environ['HAMASUDS'] == '1'))
+    MACHINE_NAME = config['General']['machine_name']
+    USE_ZIGBEE = config.getboolean('General', 'use_zigbee')
+    USE_ZIGBEE = USE_ZIGBEE and not ('HAMASNOZIGBEE' in os.environ.keys() and
+                                     os.environ['HAMASNOZIGBEE'] == '1')
+    USE_MQTT = config.getboolean('General', 'use_mqtt')
+    USE_UDS = config.getboolean('General', 'use_uds')
+    USE_UDS = USE_UDS and os.name == 'posix'
+    if USE_ZIGBEE:
+        DEVICE = config['ZigBee']['device']
 
-    return conf_path, log_conf_path, use_uds
 
+HAMASRC = ''
+MACHINE_NAME = ''
+USE_ZIGBEE = ''
+USE_MQTT = ''
+USE_UDS = ''
+LOGRC = ''
+DEVICE = ''
 
-HAMASRC, LOGRC, USE_UDS = load_config()
+load_config()

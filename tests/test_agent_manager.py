@@ -255,7 +255,7 @@ class TestAgentManager:
                 log.setLevel(logging.DEBUG)
                 await am.start()
                 agent = am.create_agent(Agent)
-                known_platforms = am.mts.other_platforms
+                known_platforms = am._mts.other_platforms
                 assert known_platforms == ['remote_platform']
                 remote_am_aid = known_platforms[0] + '/0'
                 agent_aids = await agent.remote_process_call('get_agents',
@@ -276,8 +276,7 @@ class TestAgentManager:
         async def test_join_platform(self, event_loop):
             log.setLevel(logging.DEBUG)
             platform_name = 'remote_platform'
-            am = AgentManager.create(platform_name=platform_name,
-                                     loop=event_loop)
+            am = AgentManager.create(name=platform_name, loop=event_loop)
             try:
                 am.create_agent(Agent)
                 am.create_agent(Agent)

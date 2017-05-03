@@ -1,59 +1,48 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-#   AUTHOR:	Manoel Brunnen, manoel.brunnen@gmail.com
+#   AUTHOR: Manoel Brunnen, manoel.brunnen@gmail.com
 #   CREATED:    05.10.2016
 #   LICENSE:    MIT
-#   FILE:	test_configuration.py
+#   FILE:   test_configuration.py
 # =============================================================================
 
-from os.path import abspath
+import os
+from importlib import reload
+from os.path import abspath, join, dirname
+
 import pytest
-from hamas import Configuration, ConfigError
+
+import hamas.configuration
+from hamas import HAMASRC, MACHINE_NAME, USE_ZIGBEE, USE_MQTT, USE_UDS, LOGRC, DEVICE
 
 
 class TestConfiguration:
-    def test_no_file(self):
-        conf = Configuration('no file')
-        with pytest.raises(FileNotFoundError):
-            conf.update()
-        conf = Configuration('./test_configurations')
-        with pytest.raises(FileNotFoundError):
-            conf.update()
+    def test_default_file(self):
+        assert HAMASRC == abspath(
+            join(dirname(__file__), '../configuration/hamas.conf'))
+        assert MACHINE_NAME == 'local'
+        assert USE_ZIGBEE is True
+        assert USE_MQTT is True
+        assert USE_UDS is False
+        assert LOGRC == abspath(
+            join(dirname(__file__), '../configuration/logging.yaml'))
+        assert DEVICE == '/dev/ttyUSB'
 
-    def test_compare(self):
-        conf_1 = Configuration('./tests/test_configurations/test_eq_1.conf')
-        conf_2 = Configuration('./tests/test_configurations/test_eq_2.conf')
-        conf_3 = Configuration('./tests/test_configurations/test_eq_3.conf')
-        assert conf_1 == conf_2
-        assert conf_2 != conf_3
-        assert conf_1 != conf_3
+    @pytest.mark.parametrize(
+        'conf_file, machine_name, use_zigbee, use_mqtt, use_uds, logrc, device',
+        [('./test_configurations/test_1.conf', 'local', True, True, True,
+          './test_configurations/logging.yaml', '/dev/foo'),
+         ('./test_configurations/test_2.conf', 'emasem01', False, False, False,
+          './test_configurations/logging.yaml', '')])
+    def test_file(self, conf_file, machine_name, use_zigbee, use_mqtt, use_uds,
+                  logrc, device):
+        os.environ['HAMAS_CONFIG'] = join(dirname(__file__), conf_file)
+        conf = reload(hamas.configuration)
 
-        with open(abspath(
-                './tests/test_configurations/test_eq_1.conf')) as file_1:
-            str_1 = file_1.read()
-        with open(abspath(
-                './tests/test_configurations/test_eq_2.conf')) as file_2:
-            str_2 = file_2.read()
-        assert str_1 != str_2
-
-    def test_reset(self, tmpfile):
-        reference = Configuration('./configuration/default.conf')
-        conf = Configuration(tmpfile.name)
-
-        assert reference != conf
-        conf.reset_config()
-        assert reference == conf
-
-    def test_get_param(self):
-        config = Configuration('./tests/test_configurations/test.conf')
-        with pytest.raises(ConfigError):
-            config.get_parameter('Test Section', 'spam')
-        with pytest.raises(ConfigError):
-            config.get_parameter('spam', 'test_parameter_1')
-        assert 'test value' == config.get_parameter('Test Section',
-                                                    'test_parameter_1')
-        assert '-3' == config.get_parameter('Test Section', 'test_parameter_2')
-        assert '.5' == config.get_parameter('Test Section', 'test_parameter_3')
-        assert '.5' == config.get_parameter('Test Section', 'test_parameter_3')
-        assert 'test' == config.get_parameter('Another Test Section',
-                                              'test_param')
+        assert conf.HAMASRC == abspath(join(dirname(__file__), conf_file))
+        assert conf.MACHINE_NAME == machine_name
+        assert conf.USE_ZIGBEE == use_zigbee
+        assert conf.USE_MQTT == use_mqtt
+        assert conf.USE_UDS == use_uds and os.name == 'posix'
+        assert conf.LOGRC == abspath(join(dirname(__file__), logrc))
+        assert conf.DEVICE == device

@@ -16,7 +16,7 @@ from .connector import Connector
 from ..fractions import Fraction
 from ..messages import Message
 from ...exceptions import ConnectorError
-from ...config import USE_UDS
+from ...configuration import USE_UDS
 
 log = logging.getLogger(__name__)
 

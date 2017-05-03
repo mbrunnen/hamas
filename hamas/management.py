@@ -12,18 +12,18 @@ import importlib
 import itertools
 import logging
 import string
-import os
 
 from .agents import Agent, provide
 from .transport.message_transport import MessageTransportSystem
-from .logger import config_logger
+from .configuration import MACHINE_NAME
 
 log = logging.getLogger(__name__)
+
 
 class AgentPlatform(object):
     _allowed_chars = '_' + string.ascii_letters + string.digits
 
-    def __init__(self, name, loop, update_interval=60, regex='/dev/ttyUSB'):
+    def __init__(self, loop, update_interval=60, regex='/dev/ttyUSB'):
         def generate_name():
             gen_new = itertools.count()
             while True:
@@ -32,12 +32,12 @@ class AgentPlatform(object):
                     yield i
                 yield next(gen_new)
 
-        assert set(name) <= set(
+        assert set(MACHINE_NAME) <= set(
             self._allowed_chars
         ), "Only {} characters are allowed as platform name.".format(
             self._allowed_chars)
         self._loop = loop
-        self._name = name
+        self._name = MACHINE_NAME
         self._message_transport = MessageTransportSystem(
             platform=self, update_interval=update_interval, regex=regex)
         self.__agents = dict()
@@ -102,7 +102,7 @@ class AgentManager(Agent):
     __in_create = False
 
     @classmethod
-    def create(cls, name, loop, regex='/dev/ttyUSB'):
+    def create(cls, loop, regex='/dev/ttyUSB'):
         """Factory function which instantiates a AgentManager agent.
 
         Do not instantiate the AgentManager directly. It is a special
@@ -110,8 +110,6 @@ class AgentManager(Agent):
         Also it will create a :class:`MessageTransportSystem`.
 
         Arguments:
-            name(str):The management ID must be given. It can read from
-            a config file.
             loop (BaseEventLoop): The event loop.
             regex(str): The regular expression to find the serial port.
 
@@ -119,7 +117,7 @@ class AgentManager(Agent):
             AgentManager
 
         """
-        platform = AgentPlatform(name=name, loop=loop, regex=regex)
+        platform = AgentPlatform(loop=loop, regex=regex)
         manager = platform.create_agent(AgentManager, platform=platform)
         return manager
 
