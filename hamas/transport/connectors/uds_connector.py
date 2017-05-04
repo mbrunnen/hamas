@@ -16,7 +16,6 @@ from .connector import Connector
 from ..fractions import Fraction
 from ..messages import Message
 from ...exceptions import ConnectorError
-from ...configuration import USE_UDS
 
 log = logging.getLogger(__name__)
 
@@ -32,9 +31,10 @@ class UnixConnector(Connector):
     def __init__(self, mts):
         super(UnixConnector, self).__init__()
 
-        if not USE_UDS:
-            raise ConnectorError(
-                "Only available on Unix systems or is disabled.")
+        if os.name != 'posix':
+            raise ConnectorError('Unix Domain Sockets (UDS) are only available\
+                                 on unixoid systems. Check your configuration\
+                                 file')
         self._address = None
         self._socket_dir = '/tmp/hamas_sockets/'
         self._address = self._socket_dir + mts.platform_name

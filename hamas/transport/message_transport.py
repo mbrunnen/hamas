@@ -13,6 +13,7 @@ from .connectors.local_connector import LocalConnector
 from .connectors.platform_connector import PlatformConnector
 from .connectors.uds_connector import UnixConnector
 from .connectors.zigbee_connector import ZigBeeConnector
+#XXX:  from .connectors.mqtt_connector import MqttConnector
 from .messages import Message
 from ..exceptions import TransmissionError, ConnectorError
 from ..utils import bytes2hexstr
@@ -24,13 +25,24 @@ class MessageTransportSystem(object):
     """Provides the communication between agents.
 
     Args:
-        self._platform(AgentPlatform)
+        platform (AgentPlatform): The agent platform on which the
+            message transport system resides.
+        has_zigbee (bool): Define if a :class:`ZigBeeConnector` should be initialised.
+        has_mqtt (bool): Define if a :class:`MqttConnector` should be initialised.
+        has_uds (bool): Define if a :class:`UnixConnector` should be initialised.
+        update_interval (int,float): Define in what interval the connectors
+            should update their network.
+        regex (str): A regular expression to find the ZigBee device, if needed.
+
     """
 
-    def __init__(self, platform, update_interval=60, regex='/dev/ttyUSB'):
-        """TODO: to be defined.
-        """
-
+    def __init__(self,
+                 platform,
+                 has_zigbee,
+                 has_mqtt,
+                 has_uds,
+                 regex,
+                 update_interval=60):
         self._platform = platform
         self._loop = platform.loop
         self._pending_reply_futs = {}
@@ -106,8 +118,8 @@ class MessageTransportSystem(object):
         p_name, aid = self.parse_aid(message.sender)
         broadcast_jobs.append(
             asyncio.ensure_future(self._local_connector.broadcast(message)))
-        # don't rebroadcast
         if p_name == self.platform_name:
+            # don't rebroadcast
             if self._platform_connector:
                 broadcast_jobs.append(
                     asyncio.ensure_future(
@@ -140,21 +152,14 @@ class MessageTransportSystem(object):
             message.recipient,
             message.content.__class__.__name__,
             extra={
-                'data_context': 'received_msgs',
-                'data': {
+                'data_context': 'received_msgs', 'data': {
                     'performative':
-                    message.performative,
-                    'sender':
-                    message.sender,
-                    'routing':
-                    message.routing,
-                    'recipient':
-                    message.recipient,
-                    'content':
-                    message.content.__class__.__name__,
-                    'conversation_id':
-                    '0x' + bytes2hexstr(message.conversation_id),
-                    'management':
+                    message.performative, 'sender':
+                    message.sender, 'routing':
+                    message.routing, 'recipient':
+                    message.recipient, 'content':
+                    message.content.__class__.__name__, 'conversation_id':
+                    '0x' + bytes2hexstr(message.conversation_id), 'management':
                     self.platform_name
                 }
             })

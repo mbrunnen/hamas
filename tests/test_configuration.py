@@ -7,26 +7,24 @@
 # =============================================================================
 
 import os
-from importlib import reload
 from os.path import abspath, join, dirname
 
 import pytest
 
-import hamas.configuration
-from hamas import HAMASRC, MACHINE_NAME, USE_ZIGBEE, USE_MQTT, USE_UDS, LOGRC, DEVICE
+from hamas.configuration import default_config, Configuration
 
 
 class TestConfiguration:
-    def test_default_file(self):
-        assert HAMASRC == abspath(
+    def test_default_config(self):
+        assert default_config.file == abspath(
             join(dirname(__file__), '../configuration/hamas.conf'))
-        assert MACHINE_NAME == 'local'
-        assert USE_ZIGBEE is True
-        assert USE_MQTT is True
-        assert USE_UDS is False
-        assert LOGRC == abspath(
+        assert default_config.machine_name == 'local'
+        assert default_config.use_zigbee is True
+        assert default_config.use_mqtt is True
+        assert default_config.use_uds is False
+        assert default_config.log_conf == abspath(
             join(dirname(__file__), '../configuration/logging.yaml'))
-        assert DEVICE == '/dev/ttyUSB'
+        assert default_config.device == '/dev/ttyUSB'
 
     @pytest.mark.parametrize(
         'conf_file, machine_name, use_zigbee, use_mqtt, use_uds, logrc, device',
@@ -36,13 +34,12 @@ class TestConfiguration:
           './test_configurations/logging.yaml', '')])
     def test_file(self, conf_file, machine_name, use_zigbee, use_mqtt, use_uds,
                   logrc, device):
-        os.environ['HAMAS_CONFIG'] = join(dirname(__file__), conf_file)
-        conf = reload(hamas.configuration)
+        conf = Configuration(conf_file)
 
-        assert conf.HAMASRC == abspath(join(dirname(__file__), conf_file))
-        assert conf.MACHINE_NAME == machine_name
-        assert conf.USE_ZIGBEE == use_zigbee
-        assert conf.USE_MQTT == use_mqtt
-        assert conf.USE_UDS == use_uds and os.name == 'posix'
-        assert conf.LOGRC == abspath(join(dirname(__file__), logrc))
-        assert conf.DEVICE == device
+        assert conf.file == abspath(join(dirname(__file__), conf_file))
+        assert conf.machine_name == machine_name
+        assert conf.use_zigbee == use_zigbee
+        assert conf.use_mqtt == use_mqtt
+        assert conf.use_uds == use_uds and os.name == 'posix'
+        assert conf.log_conf == abspath(join(dirname(__file__), logrc))
+        assert conf.device == device

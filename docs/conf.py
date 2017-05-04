@@ -40,6 +40,7 @@ extensions = [
     'sphinxcontrib.asyncio',
     'sphinx.ext.imgmath',
     'sphinx.ext.githubpages',
+    'sphinx.ext.intersphinx',
 ]
 
 # Napoleon settings
@@ -172,5 +173,4 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
+intersphinx_mapping = {'python': ('https://docs.python.org/3.6', None)}

@@ -5,7 +5,11 @@
 #   LICENSE:    MIT
 #   FILE:       management.py
 # =============================================================================
-"""
+"""The agent management module contains the two basic classes for the
+management of the agents: The :class:`AgentManager` and the
+:class:`AgentPlatform`. The :meth:`AgentManager.create` classmethod is used to
+initiate the whole system, including the :class:`AgentManager` and the
+:class:`AgentPlatform`.
 """
 
 import importlib
@@ -14,16 +18,27 @@ import logging
 import string
 
 from .agents import Agent, provide
+from .configuration import def_config
 from .transport.message_transport import MessageTransportSystem
-from .configuration import MACHINE_NAME
 
 log = logging.getLogger(__name__)
 
 
 class AgentPlatform(object):
+    """The :class:`AgentPlatform` contains all the elements of a multi-agent
+    system. This includes the message transport system and all the agents.
+
+    Args:
+        loop (asyncio.BaseEventLoop): The loop in which the platform should
+            run.
+        name (str): The unique name of the platform.
+        regex (str): The device path of the ZigBee module.
+        update_interval (int,float): The interval of updating the
+            :class:`.MessageTransportSystem`.
+    """
     _allowed_chars = '_' + string.ascii_letters + string.digits
 
-    def __init__(self, loop, update_interval=60, regex='/dev/ttyUSB'):
+    def __init__(self, loop, name, regex, update_interval=60):
         def generate_name():
             gen_new = itertools.count()
             while True:
@@ -32,12 +47,12 @@ class AgentPlatform(object):
                     yield i
                 yield next(gen_new)
 
-        assert set(MACHINE_NAME) <= set(
+        assert set(name) <= set(
             self._allowed_chars
         ), "Only {} characters are allowed as platform name.".format(
             self._allowed_chars)
         self._loop = loop
-        self._name = MACHINE_NAME
+        self._name = name
         self._message_transport = MessageTransportSystem(
             platform=self, update_interval=update_interval, regex=regex)
         self.__agents = dict()
@@ -53,10 +68,14 @@ class AgentPlatform(object):
 
     @property
     def name(self):
+        """str: The name of the platform."""
         return self._name
 
     @property
     def loop(self):
+        """BaseEventLoop: The :class:`asyncio.BaseEventLoop` in which
+        the coroutines of the application will run.
+        """
         return self._loop
 
     @property
@@ -92,22 +111,25 @@ class AgentPlatform(object):
 
 
 class AgentManager(Agent):
-    """First Agent running which creates, runs and manages the agents.
+    """Initial :class:`hamas.agents.Agent` running which creates, runs and
+    manages the agents.
 
     Attributes:
-        _white_pages (dict): Dictionary which contains the agent description, actually the class name.
-        _platform (AgentPlatform): The platform, on which the :class:`AgentManager` is managing the agents.
+        _white_pages (dict): Dictionary which contains the agent description,
+            actually the class name.
+        _platform (AgentPlatform): The platform, on which the
+            :class:`AgentManager` is managing the agents.
 
     """
     __in_create = False
 
     @classmethod
-    def create(cls, loop, regex='/dev/ttyUSB'):
+    def create(cls, loop, config=def_config):
         """Factory function which instantiates a AgentManager agent.
 
-        Do not instantiate the AgentManager directly. It is a special
-        agent, which has no ID given, so it will create it's own ID.
-        Also it will create a :class:`MessageTransportSystem`.
+        Do not instantiate the AgentManager directly. It is a special agent,
+        which has no ID given, so it will create it's own ID.  Also it will
+        create a :class:`hamas.MessageTransportSystem`.
 
         Arguments:
             loop (BaseEventLoop): The event loop.
@@ -117,7 +139,7 @@ class AgentManager(Agent):
             AgentManager
 
         """
-        platform = AgentPlatform(loop=loop, regex=regex)
+        platform = AgentPlatform(loop=loop,regex=config.device)
         manager = platform.create_agent(AgentManager, platform=platform)
         return manager
 
@@ -136,19 +158,28 @@ class AgentManager(Agent):
         return self._mts.other_platforms
 
     async def start(self):
+        """This method starts all the tasks of the multi-agent system. This
+        includes sending network discovery beacons.
+
+        """
         await self._platform.start()
 
     def stop(self):
-        """ Cancel the coroutines of the AgentManager.
-
+        """ Stops all the tasks of the multi-agent system.
         """
         self._platform.stop()
 
     async def wait_for_zigbee(self):
+        """This couroutine blocks until other participants are found in the
+        ZigBee network and is used for testing purposes.
+        """
         await self._mts.wait_for_zigbee()
 
     @property
     def white_pages(self):
+        """dict: Dictionary which contains the agent description, actually the
+        class name.
+        """
         return self._white_pages
 
     def create_agent(self, agent_class, *args, **kwargs):

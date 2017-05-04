@@ -24,10 +24,9 @@ async def _print_agents(agent_manager):
 
 def main():
     loop = asyncio.get_event_loop()
-    platform_name = 'foo'
-    regex = '/dev/ttyUSB'
-    am = AgentManager.create(platform_name, loop, regex=regex)
+    am = AgentManager.create(loop)
     am.create_agent(Agent)
+    asyncio.ensure_future(am.start())
     task = asyncio.ensure_future(_print_agents(am))
     try:
         print("Running...")

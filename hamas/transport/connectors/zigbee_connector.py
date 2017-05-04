@@ -55,7 +55,7 @@ class ZigBeeConnector(Connector):
     def __init__(self,
                  loop,
                  platform_name,
-                 regex='/dev/ttyUSB',
+                 regex,
                  baud=230400,
                  callback=None,
                  serial_timeout=5,
