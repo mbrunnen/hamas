@@ -10,10 +10,10 @@ import asyncio
 import logging
 
 from .connectors.local_connector import LocalConnector
+from .connectors.mqtt_connector import MqttConnector
 from .connectors.platform_connector import PlatformConnector
 from .connectors.uds_connector import UnixConnector
 from .connectors.zigbee_connector import ZigBeeConnector
-#XXX:  from .connectors.mqtt_connector import MqttConnector
 from .messages import Message
 from ..exceptions import TransmissionError, ConnectorError
 from ..utils import bytes2hexstr
@@ -27,21 +27,26 @@ class MessageTransportSystem(object):
     Args:
         platform (AgentPlatform): The agent platform on which the
             message transport system resides.
+        has_platform (bool): Define if a :class:`PlatformConnector` should be
+            initialised.
         has_zigbee (bool): Define if a :class:`ZigBeeConnector` should be initialised.
         has_mqtt (bool): Define if a :class:`MqttConnector` should be initialised.
         has_uds (bool): Define if a :class:`UnixConnector` should be initialised.
+        regex (str): A regular expression to find the ZigBee device, if needed.
+        broker (str): The address of the MQTT broker.
         update_interval (int,float): Define in what interval the connectors
             should update their network.
-        regex (str): A regular expression to find the ZigBee device, if needed.
 
     """
 
     def __init__(self,
                  platform,
+                 has_platform,
                  has_zigbee,
                  has_mqtt,
                  has_uds,
                  regex,
+                 broker,
                  update_interval=60):
         self._platform = platform
         self._loop = platform.loop
@@ -53,10 +58,26 @@ class MessageTransportSystem(object):
         self._interval = update_interval
         self._run_task = None
         self._local_connector = LocalConnector(self._platform)
-        self._platform_connector = None
-        self._unix_connector = None
-        self._zigbee_connector = None
-        self._initiate_connectors(regex)
+
+        if has_platform:
+            self._init_platform_conn()
+        else:
+            self._local_connector = None
+
+        if has_zigbee:
+            self._init_zigbee_conn(regex)
+        else:
+            self._zigbee_connector = None
+
+        if has_mqtt:
+            self._init_mqtt_conn(broker=broker)
+        else:
+            self._mqtt_connector = None
+
+        if has_uds:
+            self._init_unix_conn()
+        else:
+            self._unix_connector = None
 
     @property
     def platform_name(self):
@@ -74,7 +95,7 @@ class MessageTransportSystem(object):
         """
         assert type(
             message) is Message, "Only Messages can be sent:\n\t".format(
-                message)
+            message)
         log.debug("Sending a message from {} to {} via {}.".format(
             message.sender, message.recipient, message.routing))
         if message.sender == message.recipient:
@@ -154,13 +175,14 @@ class MessageTransportSystem(object):
             extra={
                 'data_context': 'received_msgs', 'data': {
                     'performative':
-                    message.performative, 'sender':
-                    message.sender, 'routing':
-                    message.routing, 'recipient':
-                    message.recipient, 'content':
-                    message.content.__class__.__name__, 'conversation_id':
-                    '0x' + bytes2hexstr(message.conversation_id), 'management':
-                    self.platform_name
+                        message.performative, 'sender':
+                        message.sender, 'routing':
+                        message.routing, 'recipient':
+                        message.recipient, 'content':
+                        message.content.__class__.__name__, 'conversation_id':
+                        '0x' + bytes2hexstr(message.conversation_id),
+                    'management':
+                        self.platform_name
                 }
             })
         await self.send(message)
@@ -203,7 +225,8 @@ class MessageTransportSystem(object):
             await asyncio.sleep(self._interval)
             log.info("The MessageTransportSystem on '{}' ran an update task.".
                      format(self.platform_name))
-            await self._zigbee_connector.update_others()
+            if self._zigbee_connector:
+                await self._zigbee_connector.update_others()
 
     @property
     def other_platforms(self):
@@ -216,19 +239,18 @@ class MessageTransportSystem(object):
             others += self._zigbee_connector.other_platforms
         return others
 
-    def _initiate_connectors(self, regex):
-        """Initiate communication channels.
+    def _init_platform_conn(self):
+        """Initiate the platform connector.
         """
         try:
             self._platform_connector = PlatformConnector(self)
         except ConnectorError:
             self._platform_connector = None
             log.warning("Could not initialize PlatformConnector.")
-        try:
-            self._unix_connector = UnixConnector(self)
-        except ConnectorError:
-            self._unix_connector = None
-            log.warning("Could not initialize UnixConnector.")
+
+    def _init_zigbee_conn(self, regex):
+        """Initiate the ZigBee Connector.
+        """
         try:
             self._zigbee_connector = ZigBeeConnector(
                 self._loop,
@@ -238,3 +260,21 @@ class MessageTransportSystem(object):
         except ConnectorError:
             self._zigbee_connector = None
             log.warning("Could not initialize ZigBeeConnector.")
+
+    def _init_mqtt_conn(self, broker):
+        """Initiate the MQTT Connector.
+        """
+        try:
+            self._mqtt_connector = MqttConnector(mts=self, broker=broker)
+        except ConnectorError:
+            self._zigbee_connector = None
+            log.warning("Could not initialize ZigBeeConnector.")
+
+    def _init_unix_conn(self):
+        """Initiate the unix domain socket connector.
+        """
+        try:
+            self._unix_connector = UnixConnector(self)
+        except ConnectorError:
+            self._unix_connector = None
+            log.warning("Could not initialize UnixConnector.")

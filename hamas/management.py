@@ -18,7 +18,6 @@ import logging
 import string
 
 from .agents import Agent, provide
-from .configuration import def_config
 from .transport.message_transport import MessageTransportSystem
 
 log = logging.getLogger(__name__)
@@ -32,13 +31,23 @@ class AgentPlatform(object):
         loop (asyncio.BaseEventLoop): The loop in which the platform should
             run.
         name (str): The unique name of the platform.
+        has_platform (bool): True if the :class:`PlatformConnector` should
+            be used.
+        has_zigbee (bool): True if the :class:`ZigBeeConnector` should be
+            used.
+        has_mqtt (bool): True if the :class:`MqttConnector` should be
+            used.
+        has_uds (bool): True if the class:`UnixConnector` should be
+            used.
         regex (str): The device path of the ZigBee module.
+        broker (str): The address of the MQTT broker.
         update_interval (int,float): The interval of updating the
             :class:`.MessageTransportSystem`.
     """
     _allowed_chars = '_' + string.ascii_letters + string.digits
 
-    def __init__(self, loop, name, regex, update_interval=60):
+    def __init__(self, loop, name, has_platform, has_zigbee, has_mqtt,
+                 has_uds, regex, broker, update_interval=60):
         def generate_name():
             gen_new = itertools.count()
             while True:
@@ -54,7 +63,14 @@ class AgentPlatform(object):
         self._loop = loop
         self._name = name
         self._message_transport = MessageTransportSystem(
-            platform=self, update_interval=update_interval, regex=regex)
+            platform=self,
+            has_platform=has_platform,
+            has_zigbee=has_zigbee,
+            has_mqtt=has_mqtt,
+            has_uds=has_uds,
+            regex=regex,
+            broker=broker,
+            update_interval=update_interval)
         self.__agents = dict()
         self._last_num = 0
         self._free_names = list()
@@ -114,6 +130,16 @@ class AgentManager(Agent):
     """Initial :class:`hamas.agents.Agent` running which creates, runs and
     manages the agents.
 
+    Args:
+        has_platform (bool): True if the :class:`PlatformConnector` should
+            be used.
+        has_zigbee (bool): True if the :class:`ZigBeeConnector` should be
+            used.
+        has_mqtt (bool): True if the :class:`MqttConnector` should be
+            used.
+        has_uds (bool): True if the class:`UnixConnector` should be
+            used.
+
     Attributes:
         _white_pages (dict): Dictionary which contains the agent description,
             actually the class name.
@@ -124,7 +150,7 @@ class AgentManager(Agent):
     __in_create = False
 
     @classmethod
-    def create(cls, loop, config=def_config):
+    def create(cls, loop, config):
         """Factory function which instantiates a AgentManager agent.
 
         Do not instantiate the AgentManager directly. It is a special agent,
@@ -133,13 +159,21 @@ class AgentManager(Agent):
 
         Arguments:
             loop (BaseEventLoop): The event loop.
-            regex(str): The regular expression to find the serial port.
+            config(Configuration): A configuration, which is an instance of
+                :class:`hamas.Configuration`.
 
         Returns:
             AgentManager
 
         """
-        platform = AgentPlatform(loop=loop,regex=config.device)
+        platform = AgentPlatform(loop=loop,
+                                 name=config.machine_name,
+                                 has_platform=config.use_platform,
+                                 has_zigbee=config.use_zigbee,
+                                 has_mqtt=config.use_mqtt,
+                                 has_uds=config.use_uds,
+                                 regex=config.device,
+                                 broker=config.broker)
         manager = platform.create_agent(AgentManager, platform=platform)
         return manager
 
@@ -188,7 +222,7 @@ class AgentManager(Agent):
         Args:
             agent_class (class): Passes the class of the required Agent
             args (list): Passes the arguments to the constructor of the agent
-            class
+                class
             kwargs (dict): Passes the keyword arguments to the constructor of
             the agent class
 
@@ -213,10 +247,9 @@ class AgentManager(Agent):
     @provide
     def perform_create_agent(self, agent_class_name):
         # TODO : args, kwargs
-
         path, class_name = agent_class_name.rsplit('.', 1)
-        module = importlib.import_module(path)
-        agent_class = getattr(module, class_name)
+        mod = importlib.import_module(path)
+        agent_class = getattr(mod, class_name)
         assert issubclass(agent_class, Agent)
         agent = self.create_agent(agent_class)
         return agent.aid

@@ -35,13 +35,16 @@ Example:
         ; A exemplary configuration file
         [General]
         machine_name = local
+        use_platform = false
         use_zigbee = true
         use_mqtt = true
         use_uds = false
-        log_config = ./logging.yaml
 
         [ZigBee]
         device = /dev/ttyUSB
+
+        [MQTT]
+        broker = localhost
         ; vim:ft=dosini
 
 """
@@ -59,33 +62,39 @@ class Configuration(object):
     a instance of this class and will build the multi-agent system according
     to the given configuration. When importing the :mod:`hamas` package, a
     default configuration will be created: :data:`def_config`. This default
-    configuration is either created from the default configuratin file or the
+    configuration is either created from the default configuration file or the
     one given by :envvar:`HAMAS_CONFIG`. This default configuration will be
     used by the :meth:`AgentManager.create`
 
     """
 
-    def __init__(self, conf_file):
+    def __init__(self, conf_file=None):
         super(Configuration, self).__init__()
 
-        conf_file = conf_file
+        if conf_file is None:
+            conf_file = os.environ[
+                'HAMAS_CONFIG'] if 'HAMAS_CONFIG' in os.environ.keys() \
+                else os.path.abspath(
+                os.path.join(os.path.dirname(__file__),
+                             '../configuration/hamas.conf'))
         self._file = os.path.abspath(conf_file)
-        conf_dir = os.path.dirname(self._file)
 
         config = configparser.ConfigParser()
         config.read(self._file)
 
-        self._log_conf = os.path.abspath(
-            os.path.join(conf_dir, config['General']['log_config']))
-
         self._machine_name = config['General']['machine_name']
+        self._use_platform = config.getboolean('General', 'use_platform')
         self._use_zigbee = config.getboolean('General', 'use_zigbee')
         self._use_mqtt = config.getboolean('General', 'use_mqtt')
         self._use_uds = config.getboolean('General', 'use_uds')
-        if 'ZigBee' in config and 'device' in config['ZigBee']:
+        if self._use_zigbee:
             self._device = config['ZigBee']['device']
         else:
             self._device = ''
+        if self._use_mqtt:
+            self._broker = config['MQTT']['broker']
+        else:
+            self._broker = ''
 
     @property
     def file(self):
@@ -94,16 +103,17 @@ class Configuration(object):
         return self._file
 
     @property
-    def log_conf(self):
-        """str: Returns the path of the log configuration file.
-        """
-        return self._log_conf
-
-    @property
     def machine_name(self):
         """str: Returns the machine name specified in the configuration file.
         """
         return self._machine_name
+
+    @property
+    def use_platform(self):
+        """bool: Returns if the platform connector shall be used for
+        communication.
+        """
+        return self._use_platform
 
     @property
     def use_zigbee(self):
@@ -129,9 +139,8 @@ class Configuration(object):
         """
         return self._device
 
-
-def_conf_file = os.environ[
-    'HAMAS_CONFIG'] if 'HAMAS_CONFIG' in os.environ.keys() else os.path.abspath(
-        os.path.join(os.path.dirname(__file__), '../configuration/hamas.conf'))
-
-def_config = Configuration(def_conf_file)
+    @property
+    def broker(self):
+        """str: Returns the address of the MQTT broker.
+        """
+        return self._broker

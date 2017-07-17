@@ -5,9 +5,11 @@
 #   LICENSE:    MIT
 #   FILE:	agents.py
 # =============================================================================
-"""The agent module implements the base :class:`Agent` class. All agents should be derived from this class. The agents
-can have special methods, which can be called by other agents and are decorated with :func:`provide`. To handle their
-conversations they have with other agents they use the :class:`ConversationRegister`.
+"""The agent module implements the base :class:`Agent` class. All agents should
+be derived from this class. The agents can have special methods, which can be
+called by other agents and are decorated with :func:`provide`. To handle their
+conversations they have with other agents they use the
+:class:`ConversationRegister`
 """
 
 import asyncio
@@ -25,16 +27,20 @@ log = logging.getLogger(__name__)
 
 
 class ConversationRegister(object):
-    """A dictionary for storing the conversations. When a new conversation is created, by calling
-    :meth:`new_conversation`, a new :class:`asyncio.Queue` is created and a :class:`asyncio.Future` is returned.
-    Every message has a conversation identifier, so the agent can group all messages with the same conversation ID in
-    this register. The agent can :meth:`put` new messages in this register, but it can also :meth:`get` a message when
-    it has time to process a message. When the agent considers a conversation as finished, it can set a result for this
-    conversation in the corresponding `future`.
+    """A dictionary for storing the conversations. When a new conversation is
+    created, by calling :meth:`new_conversation`, a new :class:`asyncio.Queue`
+    is created and a :class:`asyncio.Future` is returned.  Every message has a
+    conversation identifier, so the agent can group all messages with the same
+    conversation ID in this register. The agent can :meth:`put` new messages in
+    this register, but it can also :meth:`get` a message when it has time to
+    process a message. When the agent considers a conversation as finished, it
+    can set a result for this conversation in the corresponding `future`.
 
     Attributes:
-        _queues(dict): A dictionary with the conversation ID `conv_id` as key and a :class:`asyncio.Queue` as value.
-        _futs(dict): A dictionary with the conversation ID `conv_id` as key and a :class:`asyncio.Future` as value.
+        _queues(dict): A dictionary with the conversation ID `conv_id` as key
+            and a :class:`asyncio.Queue` as value.
+        _futs(dict): A dictionary with the conversation ID `conv_id` as key and
+            a :class:`asyncio.Future` as value.
     """
 
     def __init__(self):
@@ -47,27 +53,29 @@ class ConversationRegister(object):
         return len(self._queues)
 
     def __contains__(self, conv_id):
-        """`conv_id in self` returns `True` or `False`, whether `conv_id` is an active conversation or not.
+        """`conv_id in self` returns `True` or `False`, whether `conv_id` is an
+        active conversation or not.
         """
         return conv_id in self._queues
 
     def new_conversation(self, conv_id):
-        """Allocate a new conversation including a :class:`asyncio.Queue` and a :class:`asyncio.Future`.
+        """Allocate a new conversation including a :class:`asyncio.Queue` and a
+        :class:`asyncio.Future`.
 
         Arguments:
             conv_id(bytes): The key which allows access to the conversation.
         """
-        log.debug(
-            "Started a new Queue with ID {}. There are now {:d} queues in this register.".
-            format(conv_id, len(self._queues) + 1))
+        log.debug("Started a new Queue with ID %s. \
+            There are now %i queues in this register.", conv_id,
+                  len(self._queues) + 1)
         assert conv_id not in self
         fut = asyncio.Future()
         self._futs[conv_id] = fut
         queue = asyncio.Queue()
         self._queues[conv_id] = queue
         if len(self._queues) > 100:
-            log.warning("The list of queues is getting long: {:d}".format(
-                len(self._queues)))
+            log.warning("The list of queues is getting long: %i",
+                        len(self._queues))
         return fut
 
     async def put(self, conv_id, msg):
@@ -86,7 +94,8 @@ class ConversationRegister(object):
         Arguments:
             conv_id(bytes): The key which allows access to the conversation.
         Returns:
-            msg(Message): The incoming message associated with this conversation.
+            msg(Message): The incoming message associated with this
+                conversation.
         """
         assert conv_id in self
         return await self._queues[conv_id].get()
@@ -101,8 +110,8 @@ class ConversationRegister(object):
 
 
 def provide(func):
-    """:func:`provide` acts as function decorator and is used for methods, that the agent provides as a service to other
-    agents.
+    """:func:`provide` acts as function decorator and is used for methods, that
+    the agent provides as a service to other agents.
     """
 
     func.provided = True
@@ -110,13 +119,15 @@ def provide(func):
 
 
 class Agent(object):
-    """The base class for all other agents. An instance is already able to communicate to other instances. In
-    particular, it uses a :class:`ConversationRegister` and a :class:`MessageTransportSystem` for the connunication with
-    other agents.
+    """The base class for all other agents. An instance is already able to
+    communicate to other instances. In particular, it uses a
+    :class:`ConversationRegister` and a :class:`MessageTransportSystem` for the
+    connunication with other agents.
 
     Args:
+        mts(MessageTransportSystem): The :class:`.MessageTransportSystem` used
+            by this agent.
         aid(str): The agent's unique identifier.
-        mts(MessageTransportSystem): The :class:`MessageTransportSystem` used by this agent.
     """
 
     _allowed_chars = '/_' + string.ascii_letters + string.digits
@@ -133,7 +144,8 @@ class Agent(object):
 
     @property
     def aid(self):
-        """str: The unique agent identifier. Composed of the platform name and an agent name.
+        """str: The unique agent identifier. Composed of the platform name and
+        an agent name.
         """
         return self._aid
 
@@ -168,9 +180,10 @@ class Agent(object):
         to finish.
 
         Args:
-            message (Message): The conversation opener, i.e. a remote process call
-            timeout (float): After this amount of time the conversation times out
-
+            message (Message): The conversation opener, i.e. a remote process
+                call
+            timeout (float): After this amount of time the conversation times
+                out
 
         Returns:
             reply (Future): The reply future contains the reply of the the call
@@ -196,7 +209,8 @@ class Agent(object):
 
         Args:
             message (Message): The request message to open the conversation.
-            timeout (float): The amount of time the requesting agent is willing to wait
+            timeout (float): The amount of time the requesting agent is willing
+                to wait
 
         Returns:
             reply (Reply,list):
@@ -267,12 +281,11 @@ class Agent(object):
             await self._conversations.put(message.conversation_id, message)
         elif message.performative == 'request':
             await self._on_request_cb(message)
-        elif message.performative is None:
-            # old message types
-            await self.custom_contents_cb(message)
+        # XXX old message types:  elif message.performative is None:
+        #  await self.custom_contents_cb(message)
         else:
-            log.warning("Got an unexpected reply. Perhaps timed out.\n\t{}".
-                        format(message.content))
+            log.warning("Got an unexpected reply. Perhaps timed out.\n\t%s",
+                        message.content)
 
     async def _message_handler(self, conv_id, timeout, num_items):
         def stop_condition():
@@ -340,14 +353,13 @@ class Agent(object):
 
         await self.send(reply)
 
-    async def custom_contents_cb(self, message):
-        """Normally everything should work over RemoteProcessCall.
-
-        If the application uses other payloads than RemoteProcessCalls this function is called.
-        This is here make the transition easier.
-        Args:
-            message(Message): A message with custom content
-        """
-        log.debug(
-            "No 'custom_contents_cb' callback for agent '{}' provided. Message dropped:\n\t{}".
-            format(self, message))
+    #XXX  async def custom_contents_cb(self, message):
+    #  """Normally everything should work over RemoteProcessCall.
+    #  If the application uses other payloads than RemoteProcessCalls this
+    #  function is called. This is here make the transition easier.
+    #  Args:
+    #  message(Message): A message with custom content
+    #  """
+    #  log.debug(
+    #  "No 'custom_contents_cb' callback for agent '{}' provided. Message dropped:\n\t{}".
+    #  format(self, message))
