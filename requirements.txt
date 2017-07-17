@@ -1,0 +1,6 @@
+numpy
+xbee
+pyserial
+pyyaml
+Sphinx
+sphinxcontrib-asyncio
