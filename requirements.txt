@@ -6,3 +6,4 @@ Sphinx
 sphinx-rtd-theme
 sphinxcontrib-asyncio
 sphinxcontrib-websupport
+paho-mqtt
