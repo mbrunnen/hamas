@@ -3,4 +3,6 @@ xbee
 pyserial
 pyyaml
 Sphinx
+sphinx-rtd-theme
 sphinxcontrib-asyncio
+sphinxcontrib-websupport
